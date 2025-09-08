@@ -1,4 +1,3 @@
-// Updated header.js - preserving your existing styles and coding style
 import React, { useState } from 'react';
 import { Auth } from '../../Contexts/authcontext';
 import { Login }from '../auth/login';

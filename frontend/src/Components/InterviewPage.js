@@ -373,9 +373,9 @@ const addToTranscript = (speaker, message) => {
   
   console.log('transcript:', newMessage);
   
-  // TODO: Send to AI in real-time for live conversation
+  // NOT DONE YETTT: Send to AI in real-time for live conversation
   if (speaker === 'user') {
-    // This is where you'd send user messages to AI immediately
+    // send user messages to ai
     // sendToAI(message);
   }
 };
@@ -545,12 +545,12 @@ const addToTranscript = (speaker, message) => {
     console.log('Interview ended');
     setShowEndCallDialog(false);
     
-    window.location.href = '/'; // Change to your desired landing page URL
+    window.location.href = '/'; // goes to landing page
   };
 
   // Function called when user decides not to end the interview
   const cancelEndCall = () => {
-    // Just hide the dialog and continue the interview
+    // hide the dialog and continue the interview
     setShowEndCallDialog(false);
   };
 

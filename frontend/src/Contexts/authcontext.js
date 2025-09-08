@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 
 const authcontext = createContext();
 
-// Custom hook to use auth anywhere in your app
+// Custom hook to use auth anywhere
 export const Auth = () => {
     const context = useContext(authcontext);
     if (!context) {
