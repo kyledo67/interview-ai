@@ -23,10 +23,6 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-@app.get("/")
-def read_root():
-    return {"message": "hi"}
-
 app.include_router(auth.router)
 app.include_router(resume.router)
 app.include_router(interviews.router)
