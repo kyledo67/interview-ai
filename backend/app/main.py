@@ -4,10 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware #type: ignore
 from app.database import engine, Base
 from app.models import user, token
 from app.api.endpoints import interviews, code, resume
-
+from fastapi.staticfiles import StaticFiles #type: ignore
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI()
+
+
 
 origins = [
     "http://localhost:3000" 
@@ -30,3 +32,4 @@ app.include_router(resume.router)
 app.include_router(interviews.router)
 app.include_router(code.router, prefix="/code", tags=["code"])
 
+app.mount("/", StaticFiles(directory="../frontend/build/", html=True), name="static")
