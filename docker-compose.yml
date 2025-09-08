@@ -4,7 +4,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: ./backend/Dockerfile
+      dockerfile: Dockerfile
     container_name: interview-ai-github-backend
     ports:
       - "8001:8000"
