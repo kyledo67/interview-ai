@@ -30,12 +30,12 @@ function Resumeupload() {
         const formdata = new FormData();
         formdata.append("resume", selectedfile);
 
-        console.log("upload: http://localhost:8000/upload");
+        console.log("upload: http://localhost:8001/upload");
         console.log("file:", selectedfile.name);
         console.log("user:", user?.email);
 
         try {
-            const response = await fetch("http://localhost:8000/upload", {
+            const response = await fetch("http://localhost:8001/upload", {
                 method: "POST",
                 body: formdata,
                 credentials: "include"

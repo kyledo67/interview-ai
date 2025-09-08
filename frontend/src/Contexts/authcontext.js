@@ -59,7 +59,7 @@ export const Authprovider = ({ children }) => {
     // Refresh the access token using refresh token
     const refreshToken = async () => {
         try {
-            const response = await fetch('http://localhost:8000/refresh', {
+            const response = await fetch('http://localhost:8001/refresh', {
                 method: 'POST',
                 credentials: 'include'
             });
@@ -114,7 +114,7 @@ export const Authprovider = ({ children }) => {
     // Calls your backend to see if user has valid session cookies
     const checkauth = async () => {
         try {
-            const response = await apiCall('http://localhost:8000/me');
+            const response = await apiCall('http://localhost:8001/me');
             if (response.ok) {
                 const userdata = await response.json();
                 setuser(userdata); // Store user info in state
@@ -132,7 +132,7 @@ export const Authprovider = ({ children }) => {
     // Handles login form submission
     const login = async (email, password) => {
         try {
-            const response = await fetch('http://localhost:8000/login', {
+            const response = await fetch('http://localhost:8001/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -158,7 +158,7 @@ export const Authprovider = ({ children }) => {
     // Handles registration form submission
     const register = async (email, password) => {
         try {
-            const response = await fetch('http://localhost:8000/register', {
+            const response = await fetch('http://localhost:8001/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

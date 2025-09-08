@@ -385,7 +385,7 @@ const addToTranscript = (speaker, message) => {
   const startInterview = async () => {
     try {
       // cookie-based auth
-      const response = await fetch('http://localhost:8000/interviews/start', {
+      const response = await fetch('http://localhost:8001/interviews/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -423,7 +423,7 @@ const addToTranscript = (speaker, message) => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/interviews/${interviewId}/end`, {
+      const response = await fetch(`http://localhost:8001/interviews/${interviewId}/end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -487,7 +487,7 @@ const addToTranscript = (speaker, message) => {
     
     try {
       // Send POST request to backend API endpoint
-      const response = await fetch('http://localhost:8000/code/execute', {
+      const response = await fetch('http://localhost:8001/code/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json', 

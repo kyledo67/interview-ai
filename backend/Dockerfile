@@ -3,6 +3,6 @@ WORKDIR /app
 COPY ./app /app
 COPY imports .
 RUN pip install --no-cache-dir -r imports
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
 
 
