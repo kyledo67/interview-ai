@@ -14,7 +14,7 @@ import asyncio
 
 router = APIRouter()
 
-@router.post("/upload")
+@router.post("/resumeupload")
 async def upload_resume(resume: UploadFile = File(), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     #js checks if directory exists, makes on if doesn't
     maxfilesize = 5 * 1024 * 1024 #5mb

@@ -20,7 +20,7 @@ const Header = () => {
 
     const handlelogin = () => {
         if (isauthenticated) {
-            // If already logged in, go to dashboard/upload
+            // If already logged in, go to /upload
             window.location.href = '/upload';
         } else {
             setshowloginmodal(true);
