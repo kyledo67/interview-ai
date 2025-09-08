@@ -59,7 +59,7 @@ export const Authprovider = ({ children }) => {
     // Refresh the access token using refresh token
     const refreshToken = async () => {
         try {
-            const response = await fetch('http://localhost:8001/refresh', {
+            const response = await fetch('/refresh', {
                 method: 'POST',
                 credentials: 'include'
             });
@@ -111,10 +111,10 @@ export const Authprovider = ({ children }) => {
         }
     };
 
-    // Calls your backend to see if user has valid session cookies
+    // Calls backend to see if user has valid session cookies
     const checkauth = async () => {
         try {
-            const response = await apiCall('http://localhost:8001/me');
+            const response = await apiCall('/me');
             if (response.ok) {
                 const userdata = await response.json();
                 setuser(userdata); // Store user info in state
