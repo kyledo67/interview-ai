@@ -132,7 +132,7 @@ export const Authprovider = ({ children }) => {
     // Handles login form submission
     const login = async (email, password) => {
         try {
-            const response = await fetch('http://localhost:8001/login', {
+            const response = await fetch('/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -158,7 +158,7 @@ export const Authprovider = ({ children }) => {
     // Handles registration form submission
     const register = async (email, password) => {
         try {
-            const response = await fetch('http://localhost:8001/register', {
+            const response = await fetch('/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
