@@ -1,0 +1,19 @@
+/* elevated panel*/
+.hero {
+    padding: 170px 120px;
+    text-align: center;
+}
+/* main hero heading*/
+.hero h1 {
+    color: white;
+    font-size: 56px;
+    margin: 0 0 20px 0; /*spacing under headline*/
+   
+}
+/*subtext under headline*/
+.hero p  {
+    font-size: 1.25rem;
+    color: var(--text-color-secondary);
+    margin: 0;
+}
+

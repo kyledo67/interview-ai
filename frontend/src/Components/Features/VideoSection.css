@@ -1,0 +1,13 @@
+.video-section {
+  display: flex;
+  justify-content: center;
+  padding: 20rem 0;
+}
+
+.video-player {
+  width: 1150px;
+  height: 610px;
+  border-radius: 25px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}

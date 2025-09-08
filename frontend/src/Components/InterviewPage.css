@@ -1,0 +1,505 @@
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Main container */
+.interview-container {
+  height: 100vh;
+  background-color: #111827;
+  color: white;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Header bar */
+.header-bar {
+  background-color: #1f2937;
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #374151;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+}
+
+.header-title h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #60a5fa;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Control buttons */
+.control-button {
+  padding: 12px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-button.mic-on,
+.control-button.camera-on {
+  background-color: #16a34a;
+}
+
+.control-button.mic-on:hover,
+.control-button.camera-on:hover {
+  background-color: #15803d;
+}
+
+.control-button.mic-off,
+.control-button.camera-off,
+.control-button.end-call {
+  background-color: #dc2626;
+}
+
+.control-button.mic-off:hover,
+.control-button.camera-off:hover,
+.control-button.end-call:hover {
+  background-color: #b91c1c;
+}
+
+/* Main content area */
+.main-content {
+  display: flex;
+  height: calc(100vh - 69px); /* Subtract header height */
+}
+
+/* Behavioral phase */
+.behavioral-phase {
+  width: 100%;
+  transition: all 0.8s ease;
+  position: relative;
+}
+
+.behavioral-phase.transitioning {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.video-container-behavioral {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 32px;
+  gap: 32px;
+}
+
+.video-box-large {
+  width: 384px;
+  height: 288px;
+  background-color: #1f2937;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.video-box-large.speaking {
+  box-shadow: 0 0 0 4px #10b981;
+}
+
+.video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.aivideo-element {
+  height: 45%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.video-label {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.camera-off-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+}
+
+/* Technical phase */
+.technical-phase {
+  width: 100%;
+  display: flex;
+  transition: all 0.8s ease;
+}
+
+.technical-phase.transitioning {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+/* Left sidebar in technical phase */
+.video-sidebar {
+  width: 25%;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.video-box-small {
+  background-color: #1f2937;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  height: 192px;
+  transition: all 0.3s;
+}
+
+.video-box-small.speaking {
+  box-shadow: 0 0 0 4px #10b981;
+}
+
+.video-label-small {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* Coding interface */
+.coding-interface {
+  flex: 1;
+  padding: 16px;
+}
+
+.coding-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Problem description */
+.problem-description {
+  background-color: #1f2937;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  height: 33.33%;
+  overflow-y: auto;
+}
+
+.problem-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.problem-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #60a5fa;
+}
+
+.problem-text {
+  color: #d1d5db;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.examples-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.examples-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.example-item {
+  background-color: #374151;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+}
+
+.example-input {
+  color: #60a5fa;
+}
+
+.example-output {
+  color: #10b981;
+}
+
+.loading-text {
+  text-align: center;
+  color: #9ca3af;
+}
+
+/* Code editor section */
+.editor-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.language-select {
+  background-color: #374151;
+  color: white;
+  padding: 8px 12px;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  outline: none;
+}
+
+.language-select:focus {
+  border-color: #3b82f6;
+}
+
+.run-button {
+  background-color: #16a34a;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.3s;
+}
+
+.run-button:hover:not(:disabled) {
+  background-color: #15803d;
+}
+
+.run-button:disabled {
+  background-color: #4b5563;
+  cursor: not-allowed;
+}
+
+/* Editor and output panels */
+.editor-output-container {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+}
+
+.editor-panel {
+  flex: 1;
+}
+
+.monaco-editor-container {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+}
+
+
+.output-panel {
+  width: 33.33%;
+  background-color: #1f2937;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.output-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.output-content {
+  font-size: 14px;
+  color: #d1d5db;
+  white-space: pre-wrap;
+  font-family: 'Courier New', monospace;
+}
+
+/* technical button */
+.test-button-container {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.test-button {
+  background-color: #3b82f6;
+  color: white;
+  padding: 8px 24px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.test-button:hover {
+  background-color: #2563eb;
+}
+
+/* End call dialog */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.dialog-content {
+  background-color: #1f2937;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  margin: 16px;
+}
+
+.dialog-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ef4444;
+  margin-bottom: 16px;
+}
+
+.dialog-text {
+  color: #d1d5db;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: 16px;
+}
+
+.dialog-button {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.dialog-button.confirm {
+  background-color: #dc2626;
+  color: white;
+}
+
+.dialog-button.confirm:hover {
+  background-color: #b91c1c;
+}
+
+.dialog-button.cancel {
+  background-color: #4b5563;
+  color: white;
+}
+
+.dialog-button.cancel:hover {
+  background-color: #374151;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .video-container-behavioral {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .video-box-large {
+    width: 320px;
+    height: 240px;
+  }
+  
+  .video-sidebar {
+    width: 30%;
+  }
+  
+  .output-panel {
+    width: 40%;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    flex-direction: column;
+  }
+  
+  .technical-phase {
+    flex-direction: column;
+  }
+  
+  .video-sidebar {
+    width: 100%;
+    flex-direction: row;
+    height: auto;
+  }
+  
+  .video-box-small {
+    height: 120px;
+    flex: 1;
+  }
+  
+  .editor-output-container {
+    flex-direction: column;
+  }
+  
+  .output-panel {
+    width: 100%;
+    height: 200px;
+  }
+}

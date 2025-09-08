@@ -1,0 +1,125 @@
+
+.featureCard {
+    background-color: var(--bg-elevated-primary);
+    padding: 20px;
+    border-radius: 8px;
+    text-align: left;
+}
+
+.features-section {
+  background-color: #111;
+  color: white;
+  padding: 4rem 1.5rem;
+}
+
+.features-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.features-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.features-subtitle {
+  text-align: center;
+  color: #aaa;
+  margin-bottom: 2rem;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  justify-items: center;
+}
+
+.feature-card {
+  background-color: #222;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.feature-card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.feature-card-text {
+  color: #bbb;
+}
+
+.feature-video {
+  margin-bottom: 1rem;
+}
+
+.feature-video video,
+.feature-video img {
+  width: 100%;
+  border-radius: 8px;
+}
+
+
+/*feedback*/
+.feedback-section {
+  background-color: #0b0b0b; /* matches bg-gray-950 */
+  color: white;
+  padding: 4rem 1.5rem;
+}
+
+.feedback-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.feedback-title {
+  font-size: 2.25rem; /* ~text-4xl */
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.feedback-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  justify-items: center;
+}
+
+.feedback-card {
+  background-color: #1f1f1f; /* matches bg-gray-800 */
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: box-shadow 0.3s ease;
+}
+
+.feedback-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.feedback-image {
+  width: 100%;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+}
+
+.feedback-card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.feedback-card-text {
+  color: #bbb;
+}
