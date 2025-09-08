@@ -32,4 +32,4 @@ app.include_router(resume.router)
 app.include_router(interviews.router)
 app.include_router(code.router, prefix="/code", tags=["code"])
 
-app.mount("/", StaticFiles(directory="../frontend/build/", html=True), name="static")
+app.mount("/", StaticFiles(directory="/app/frontend/build", html=True), name="static")
