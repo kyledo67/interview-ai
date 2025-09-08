@@ -6,8 +6,6 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: interview-ai-github-backend
-    ports:
-      - "8001:8000"
     network_mode: "host"
     volumes:
       - ./backend:/backend/
