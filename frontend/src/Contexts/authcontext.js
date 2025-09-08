@@ -79,15 +79,17 @@ export const Authprovider = ({ children }) => {
         }
     };
 
-    // Enhanced API call function that handles token refresh automatically
+    // api call function that handles token refresh automatically
     const apiCall = async (url, options = {}) => {
+        // debug: making sure it's the right url
+        console.log(url);
         try {
             let response = await fetch(url, {
                 ...options,
                 credentials: 'include'
             });
 
-            // If we get 401, try to refresh token and retry
+            // If  401, try to refresh token and retry
             if (response.status === 401) {
                 console.log('Got 401, attempting token refresh...');
                 const refreshSuccess = await refreshToken();
