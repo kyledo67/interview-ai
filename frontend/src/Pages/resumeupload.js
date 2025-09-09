@@ -1,13 +1,14 @@
-// Updated resumeupload.js
 import React, { useState } from 'react';
 import { Auth } from '../Contexts/authcontext';
 import Protectedroute from '../Components/ProtectedRoute';
+import { useNavigate } from 'react-router-dom';
 
 function Resumeupload() {
     const [selectedfile, setselectedfile] = useState(null);
     const [uploading, setuploading] = useState(false);
     const [msg, setmsg] = useState("");
     const { user } = Auth();
+    const navigate = useNavigate();
 
     const fileselect = (event) => {
         const file = event.target.files[0];
@@ -50,7 +51,7 @@ function Resumeupload() {
                 
                 // Redirect to interview page after 2 seconds
                 setTimeout(() => {
-                    window.location.href = '/interview';
+                    navigate('/interview');
                 }, 1000);
             } else {
                 const error = await response.json();
@@ -152,7 +153,7 @@ function Resumeupload() {
                 )}
 
                 <button
-                    onClick={() => window.location.href = '/'}
+                    onClick={() => navigate('/')}
                     style={{
                         padding: "10px 20px",
                         backgroundColor: "#6c757d",

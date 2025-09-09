@@ -1,10 +1,11 @@
 import React from 'react';
 import { Auth } from '../Contexts/authcontext';
+import { useNavigate } from 'react-router-dom';
 
 const Protectedroute = ({ children }) => {
     const { isauthenticated, loading } = Auth();
-
-    // Show loading spinner while checking authentication
+    const navigate = useNavigate();
+    // Show loading spinna while checking authentication
     if (loading) {
         return (
             <div style={{

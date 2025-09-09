@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Auth } from '../../Contexts/authcontext';
 import { Login }from '../auth/login';
 import { Register }from '../auth/register';
 import styles from './Header.module.css';
 
+
 const Header = () => {
     const [showloginmodal, setshowloginmodal] = useState(false);
     const [showregistermodal, setshowregistermodal] = useState(false);
     const { user, logout, isauthenticated } = Auth();
+    const navigate = useNavigate();
 
     const handlegetstarted = () => {
         if (isauthenticated) {
             // Navigate to upload page
-            window.location.href = '/upload';
+            navigate('/upload');
         } else {
             setshowregistermodal(true);
         }
@@ -21,7 +24,7 @@ const Header = () => {
     const handlelogin = () => {
         if (isauthenticated) {
             // If already logged in, go to /upload
-            window.location.href = '/upload';
+            navigate('/upload');
         } else {
             setshowloginmodal(true);
         }
@@ -52,17 +55,17 @@ const Header = () => {
                 <div className={styles.headerContainer}>
                     <div
                         className={styles.logo}
-                        onClick={() => window.location.href = '/'}
+                        onClick={() => navigate('/')}
                         role="button"
                         tabIndex={0}
-                        onKeyDown={(e) => e.key === 'Enter' && (window.location.href = '/')}
+                        onKeyDown={(e) => e.key === 'Enter' && (navigate('/'))}
                     >
                         <img src="/logo.png" alt="logo" className={styles.logoimage} />
                     </div> 
                     
                     <div className={styles.navButtons}>
                         {isauthenticated ? (
-                            // Logged in state - show user email and logout
+                            // Logged in state - show start button and logout
                             <>
                                 <span style={{
                                     color: 'rgba(255, 255, 255, 0.8)',
@@ -73,7 +76,7 @@ const Header = () => {
                                 </span>
                                 <button 
                                     className={`${styles.ctaButton} ${styles.loginButton}`}
-                                    onClick={() => window.location.href = '/upload'}
+                                    onClick={() => navigate('/upload')}
                                 >
                                     Start
                                 </button>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Camera, CameraOff, Phone, Send } from 'lucide-react';
 import './InterviewPage.css';
 import Editor from '@monaco-editor/react';
-
+import { useNavigate } from 'react-router-dom';
 
 const MonacoEditor = ({ value, onChange, language = "javascript" }) => {
   return (
@@ -35,6 +35,7 @@ const InterviewPage = () => {
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isAISpeaking, setIsAISpeaking] = useState(false);
+  const navigate = useNavigate();
   // Stores the code that the user is writing in the technical phase
   const [code, setCode] = useState('');
   // Stores which programming language is selected
@@ -407,7 +408,7 @@ const addToTranscript = (speaker, message) => {
         
         if (response.status === 401) {
             console.error('error')
-            window.location.href = '/'
+            window.location.href = '/';
         } 
       }
     } catch (error) {
