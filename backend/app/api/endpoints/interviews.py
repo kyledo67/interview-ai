@@ -35,7 +35,6 @@ def end_interview(id: int, interview_data: InterviewEnd, user: User = Depends(ge
     interview.status = "completed"
     new_transcript = [
         {
-            "timestamp": message.timestamp.isoformat(),
             "speaker": message.speaker,
             "message": message.message
         }
