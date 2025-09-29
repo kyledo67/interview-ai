@@ -10,3 +10,4 @@ pydantic-settings
 pydantic[email]
 httpx
 python-multipart
+google-genai
