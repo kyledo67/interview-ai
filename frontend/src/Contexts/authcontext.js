@@ -45,7 +45,7 @@ export const Authprovider = ({ children }) => {
         refreshIntervalRef.current = setInterval(async () => {
             console.log('Auto-refreshing token...');
             await refreshToken();
-        }, 25 * 60 * 1000); // 25 minutes
+        }, 25 * 60 * 1000); 
     };
 
     // Clear the refresh interval
@@ -198,7 +198,7 @@ export const Authprovider = ({ children }) => {
         logout,
         loading,
         isauthenticated: !!user, // Converts user object to true/false
-        apiCall, // Expose the enhanced API call function
+        apiCall, 
         refreshToken // Expose manual refresh function if needed
     };
 

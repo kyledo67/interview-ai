@@ -365,7 +365,6 @@ const ToggleMicrophone = () => {
 // Add message to transcript
 const addToTranscript = (speaker, message) => {
   const newMessage = {
-    timestamp: new Date(),
     speaker: speaker,
     message: message
   };
@@ -432,7 +431,6 @@ const addToTranscript = (speaker, message) => {
         credentials: 'include', 
         body: JSON.stringify({
           transcript: transcript.map(msg => ({
-            timestamp: msg.timestamp,
             speaker: msg.speaker,
             message: msg.message
           }))

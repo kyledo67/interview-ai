@@ -9,7 +9,6 @@ import Interview from "./Pages/interview"
 
 export default function App() {
   return (
-    // authprovider wraps everything so all components can access auth state
     <Authprovider>
       <Router>
         <Routes>
