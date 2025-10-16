@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr # type: ignore
+from pydantic import BaseModel, EmailStr, ConfigDict # type: ignore
 from typing import Optional
 
 class UserCreate(BaseModel):
@@ -10,7 +10,7 @@ class UserResponse(BaseModel):
     id: int
     
     class Config:
-        orm_mode = True
+        model_config = ConfigDict(from_attributes=True)
 
 
 class UserLogin(BaseModel):

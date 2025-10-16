@@ -19,6 +19,8 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail = "Email already registered.")
     if len(user.password) <= 5:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail = "Password must be greater than 5 characters.")
+    if len(user.password) >= 20:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail = "Password must be less than 20 characters.")
     hashed_pw = hash_password(user.password)
     new_user = User(email = user.email, hashed_password = hashed_pw)
     db.add(new_user)

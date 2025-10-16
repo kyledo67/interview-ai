@@ -13,5 +13,6 @@ class Interview(Base):
     transcript = Column(JSON, nullable = True)
     status = Column(String, default="pending", nullable=False)
     resume_path = Column(String, nullable=False)
+    meta_info = Column(JSON, nullable=True, default={})
 
     user = relationship("User", back_populates="interviews")

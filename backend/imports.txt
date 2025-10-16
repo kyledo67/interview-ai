@@ -10,4 +10,8 @@ pydantic-settings
 pydantic[email]
 httpx
 python-multipart
+google-generativeai
 google-genai
+PyPDF2
+requests
+python-dotenv

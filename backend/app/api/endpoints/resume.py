@@ -26,6 +26,7 @@ async def upload_resume(resume: UploadFile = File(), db: Session = Depends(get_d
     x = await resume.read(5)
     if not x.startswith(b"%PDF-"):
         raise HTTPException(status_code=400, detail="Invalid file format, only pdfs")
+    await resume.seek(0)
     total = 0
     with open(filepath, "wb") as f:
         while chunk := await resume.read(1024*1024):
