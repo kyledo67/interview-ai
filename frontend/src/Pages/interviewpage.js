@@ -55,10 +55,12 @@ const InterviewPage = () => {
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const speechRecognitionRef = useRef(null);
-  const isMicOnRef = useRef(isMicOn); 
+  const isMicOnRef = useRef(isMicOn);
+  const isAISpeakingRef = useRef(isAISpeaking);
   const streamRef = useRef(null);
   const speechSynthesisRef = useRef(null);
   const lastTranscriptLengthRef = useRef(0);
+  const isInterviewStartingRef = useRef(false);
 
   const languages = [
     { id: 71, name: "Python", monaco: "python" }, 
@@ -119,6 +121,10 @@ int main() {
   }, [isMicOn]);
 
   useEffect(() => {
+    isAISpeakingRef.current = isAISpeaking;
+  }, [isAISpeaking]);
+
+  useEffect(() => {
     if (streamRef.current && userVideoRef.current) {
       userVideoRef.current.srcObject = streamRef.current;
     }
@@ -130,7 +136,7 @@ int main() {
         const newMessages = transcript.slice(lastTranscriptLengthRef.current);
         const lastMessage = newMessages[newMessages.length - 1];
         
-        if (lastMessage && lastMessage.speaker === 'User') {
+        if (lastMessage && lastMessage.speaker === 'User' && !isAISpeaking) {
           await sendMessageToAI(lastMessage.message);
         }
         
@@ -139,7 +145,7 @@ int main() {
     };
     
     handleNewUserMessage();
-  }, [transcript]);
+  }, [transcript, isAISpeaking]);
 
   const initializeWebcam = async () => {
     try {
@@ -187,7 +193,7 @@ int main() {
     const dataArray = new Uint8Array(bufferLength);
     
     const checkAudioLevel = () => {
-      if (isMicOnRef.current && analyserRef.current) {
+      if (isMicOnRef.current && analyserRef.current && !isAISpeakingRef.current) {
         analyserRef.current.getByteFrequencyData(dataArray);
         
         let sum = 0;
@@ -226,6 +232,11 @@ int main() {
       };
       
       recognition.onresult = (event) => {
+        if (isAISpeakingRef.current) {
+          console.log('AI is speaking, ignoring speech input');
+          return;
+        }
+        
         for (let i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
             const transcriptText = event.results[i][0].transcript.trim();
@@ -450,6 +461,13 @@ int main() {
   };
 
   const startInterview = async () => {
+    if (isInterviewStartingRef.current) {
+      console.log('Interview already starting, skipping duplicate call');
+      return;
+    }
+    
+    isInterviewStartingRef.current = true;
+    
     try {
       const response = await fetch('http://localhost:8001/interviews/start', {
         method: 'POST',
@@ -465,7 +483,6 @@ int main() {
         setInterviewId(result.interview_id);
         setCandidateLevel(result.candidate_level);
         
-        addToTranscript('AI', result.ai_message);
         setCurrentAIMessage(result.ai_message);
         
         speakText(result.ai_message);
@@ -479,10 +496,12 @@ int main() {
         if (response.status === 401) {
           console.error('unauthorized');
           window.location.href = '/';
-        } 
+        }
+        isInterviewStartingRef.current = false;
       }
     } catch (error) {
       console.error('Error starting interview:', error);
+      isInterviewStartingRef.current = false;
     }
   };
 
@@ -760,7 +779,7 @@ int main() {
                   <span>Interviewer</span>
                 </div>
                 
-                {isAIThinking && (
+                {(isAIThinking || isAISpeaking) && (
                   <div style={{ 
                     position: 'absolute', 
                     top: '10px', 
@@ -771,28 +790,11 @@ int main() {
                     fontSize: '12px',
                     color: 'white'
                   }}>
-                    Thinking...
+                    {isAIThinking ? 'Thinking...' : 'Speaking...'}
                   </div>
                 )}
               </div>
             </div>
-
-            {currentAIMessage && (
-              <div style={{
-                position: 'absolute',
-                bottom: '20px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'rgba(0,0,0,0.8)',
-                color: 'white',
-                padding: '15px 25px',
-                borderRadius: '10px',
-                maxWidth: '80%',
-                textAlign: 'center'
-              }}>
-                {currentAIMessage}
-              </div>
-            )}
           </div>
         )}
 
@@ -825,7 +827,7 @@ int main() {
                 <div className="video-label-small">
                   Interviewer
                 </div>
-                {isAIThinking && (
+                {(isAIThinking || isAISpeaking) && (
                   <div style={{ 
                     position: 'absolute', 
                     top: '5px', 
@@ -836,7 +838,7 @@ int main() {
                     fontSize: '10px',
                     color: 'white'
                   }}>
-                    ...
+                    {isAIThinking ? '...' : '🔊'}
                   </div>
                 )}
               </div>
