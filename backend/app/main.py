@@ -25,6 +25,7 @@ origins = [
     "http://localhost:3000",
     "http://localhost:8001",
     "http://localhost:8000",
+    "https://interview-ai-crdv.onrender.com/",
 ]
 
 app.add_middleware(
