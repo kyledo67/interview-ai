@@ -1,5 +1,5 @@
 import React from 'react';
-import InterviewPage from './interviewpage';
+import InterviewPage from './interviewpage'; 
 
 
 const Interview = () => {

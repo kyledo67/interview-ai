@@ -9,6 +9,6 @@ WORKDIR /app/backend/
 COPY ./backend/imports.txt ./imports
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r imports
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
 
 
