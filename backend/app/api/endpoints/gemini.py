@@ -120,12 +120,39 @@ ASSESSMENT:
             raise Exception(f"Failed to analyze resume with Gemini: {str(e)}")
     
     def generate_initial_message(self, resume_data: Dict) -> str:
+        """Generate warm, casual initial greeting"""
+        
+        # Extract candidate name from resume if available
+        name = resume_data.get('name', '')
         level = resume_data["level"]
-        system_prompt = self._get_behavioral_system_prompt(resume_data, 1)
         
-        user_prompt = """Start the interview. Greet the candidate warmly and professionally, then ask your first behavioral question. 
+        # Create a warm greeting prompt
+        system_prompt = f"""You are a friendly, professional technical interviewer starting a {'Software Engineering Internship' if level == 'intern' else 'New Grad Software Engineering'} interview.
+
+CRITICAL INSTRUCTIONS:
+- Start with a WARM, CASUAL greeting to make the candidate comfortable
+- Ask a light ice-breaker question like "How's your day going?" or "How are you doing today?"
+- Keep it SHORT and natural (1-2 sentences max)
+- DO NOT ask behavioral questions yet
+- DO NOT mention the interview format or structure
+- Sound genuinely friendly and welcoming, not robotic
+
+Examples of good greetings:
+- "Hi [name], thanks for joining me today! How has your day been so far?"
+- "Hey [name], great to meet you! How are you doing today?"
+- "Hi [name], thanks for taking the time to chat with me. How's everything going?"
+- "[name], good to see you! How's your day treating you?"
+
+VARY your phrasing - don't use the exact same greeting every time."""
         
-Make it conversational and natural. Do NOT explain the interview format or mention switching phases."""
+        user_prompt = f"""Generate ONLY the warm initial greeting for the candidate{f' named {name}' if name else ''}.
+
+Remember:
+- Warm and casual tone
+- Ask about their day/how they're doing
+- 1-2 sentences maximum
+- NO behavioral questions yet
+- Sound natural and friendly"""
         
         response = self._call_gemini(system_prompt, user_prompt)
         return response
