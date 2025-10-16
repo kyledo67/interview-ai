@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends #type: ignore
 import httpx #type: ignore
 import os
+from dotenv import load_dotenv #type: ignore 
 from pydantic import BaseModel #type: ignore
+
+load_dotenv()
 
 router = APIRouter()
 

@@ -59,7 +59,7 @@ export const Authprovider = ({ children }) => {
     // Refresh the access token using refresh token
     const refreshToken = async () => {
         try {
-            const response = await fetch('/refresh', {
+            const response = await fetch('http://localhost:8001/refresh', {
                 method: 'POST',
                 credentials: 'include'
             });
@@ -134,7 +134,7 @@ export const Authprovider = ({ children }) => {
     // Handles login form submission
     const login = async (email, password) => {
         try {
-            const response = await fetch('/login', {
+            const response = await fetch('http://localhost:8001/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -160,7 +160,7 @@ export const Authprovider = ({ children }) => {
     // Handles registration form submission
     const register = async (email, password) => {
         try {
-            const response = await fetch('/register', {
+            const response = await fetch('http://localhost:8001/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

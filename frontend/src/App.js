@@ -6,6 +6,8 @@ import Videosection from "./Components/Features/videosection";
 import Landingpage from "./Pages/landingpage";
 import Resumeupload from "./Pages/resumeupload";
 import Interview from "./Pages/interview"
+import ResultsPage from "./Pages/resultspage";
+
 
 export default function App() {
   return (
@@ -15,6 +17,7 @@ export default function App() {
           <Route path="/" element={<Landingpage />} />
           <Route path="/upload" element={<Resumeupload />} />
           <Route path="/interview" element={<Interview />} />
+          <Route path="/results" element={<ResultsPage />} />
         </Routes>
       </Router>
     </Authprovider>

@@ -6,9 +6,9 @@ COPY ./frontend /app/frontend/
 WORKDIR /app/frontend
 RUN npm install && npm run build
 WORKDIR /app/backend/
-COPY ./backend/imports ./imports
+COPY ./backend/imports.txt ./imports
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r imports
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 
