@@ -63,7 +63,7 @@ export const Authprovider = ({ children }) => {
  
     const refreshToken = async () => {
         try {
-            const response = await fetch('http://localhost:8001/refresh', {
+            const response = await fetch('https://interview-ai-crdv.onrender.com/refresh', {
                 method: 'POST',
                 credentials: 'include'
             });
@@ -116,7 +116,7 @@ export const Authprovider = ({ children }) => {
   
     const checkauth = async () => {
         try {
-            const response = await apiCall('http://localhost:8001/me');
+            const response = await apiCall('https://interview-ai-crdv.onrender.com/me');
             
             if (response.ok) {
                 const userdata = await response.json();
@@ -139,7 +139,7 @@ export const Authprovider = ({ children }) => {
         
         try {
             console.log('   Fetching /login endpoint...');
-            const response = await fetch('http://localhost:8001/login', {
+            const response = await fetch('https://interview-ai-crdv.onrender.com/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -154,11 +154,7 @@ export const Authprovider = ({ children }) => {
 
             if (response.ok) {
                 const data = await response.json();
-             
-                
-               
                 await checkauth();
-                console.log('efnoiuehsfhnfn');
                 return { success: true, message: data.message };
             } else {
                 console.log('auth no work');
@@ -177,7 +173,7 @@ export const Authprovider = ({ children }) => {
     const register = async (email, password) => {
         
         try {
-            const response = await fetch('http://localhost:8001/register', {
+            const response = await fetch('https://interview-ai-crdv.onrender.com/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

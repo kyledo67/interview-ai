@@ -402,7 +402,7 @@ int main() {
     setIsAIThinking(true);
     
     try {
-      const response = await fetch(`http://localhost:8001/interviews/${interviewId}/message`, {
+      const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -460,7 +460,7 @@ int main() {
     setIsAISpeaking(true);
     
     try {
-      const response = await fetch('http://localhost:8001/tts', {
+      const response = await fetch('https://interview-ai-crdv.onrender.com/tts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -511,7 +511,7 @@ int main() {
     isInterviewStartingRef.current = true;
     
     try {
-      const response = await fetch('http://localhost:8001/interviews/start', {
+      const response = await fetch('https://interview-ai-crdv.onrender.com/interviews/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -554,7 +554,7 @@ int main() {
     }
     
     try {
-      const response = await fetch(`http://localhost:8001/interviews/${interviewId}/end`, {
+      const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -655,7 +655,7 @@ int main() {
     setIsExecuting(true);
     
     try {
-      const response = await fetch('http://localhost:8001/code/execute', {
+      const response = await fetch('https://interview-ai-crdv.onrender.com/code/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -702,7 +702,7 @@ int main() {
     if (!interviewId) return;
     
     try {
-      const response = await fetch(`http://localhost:8001/interviews/${interviewId}/execute-code`, {
+      const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/execute-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
