@@ -749,7 +749,7 @@ int main() {
     console.log('Interview ended');
     setShowEndCallDialog(false);
     
-    window.location.href = '/results';
+    window.location.href = 'https://interview-ai-crdv.onrender.com/results';
   };
 
   const cancelEndCall = () => {
