@@ -63,7 +63,6 @@ export const Authprovider = ({ children }) => {
  
     const refreshToken = async () => {
         try {
-            console.log('   Fetching /refresh endpoint...');
             const response = await fetch('http://localhost:8001/refresh', {
                 method: 'POST',
                 credentials: 'include'
@@ -159,10 +158,10 @@ export const Authprovider = ({ children }) => {
                 
                
                 await checkauth();
-                console.log('heyo');
+                console.log('efnoiuehsfhnfn');
                 return { success: true, message: data.message };
             } else {
-                console.log('brooo');
+                console.log('auth no work');
                 const error = await response.json();
                 console.error('   Error detail:', error);
                 return { success: false, message: error.detail };
@@ -177,9 +176,7 @@ export const Authprovider = ({ children }) => {
 
     const register = async (email, password) => {
         
-        
         try {
-            console.log('   Fetching /register endpoint...');
             const response = await fetch('http://localhost:8001/register', {
                 method: 'POST',
                 headers: {
@@ -188,10 +185,6 @@ export const Authprovider = ({ children }) => {
                 credentials: 'include',
                 body: JSON.stringify({ email, password })
             });
-
-            console.log('   Register response status:', response.status);
-            console.log('   Register response ok:', response.ok);
-            console.log('   Register response headers:', Object.fromEntries(response.headers.entries()));
 
             if (response.ok) {
                 console.log('success');
