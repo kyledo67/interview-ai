@@ -172,18 +172,13 @@ Remember:
         technical_problem_solved: bool = False,
         asked_candidate_questions: bool = False
     ) -> Dict:
-        """
-        IMPROVED: Better handling of all phases
-        """
         if mode == "behavioral":
-            # Check if should switch to technical
             should_switch = self._should_switch_to_technical(
                 questions_asked, 
                 behavioral_duration_minutes
             )
             
             if should_switch:
-                # Generate transition response
                 system_prompt = self._get_behavioral_system_prompt(resume_data, questions_asked)
                 transition_prompt = f"""The candidate just said: "{user_message}"
 
@@ -212,39 +207,75 @@ DO NOT ask another behavioral question."""
                 # Continue behavioral phase
                 system_prompt = self._get_behavioral_system_prompt(resume_data, questions_asked)
                 
-                # Improved prompt for continuing behavioral
-                prompt = f"""The candidate just answered: "{user_message}"
+             
+                if questions_asked == 0:
+                    # This is the response to the initial greeting
+                    prompt = f"""You just greeted the candidate with something like "How are you doing today?" or "How's your day going?"
 
-This was their response to behavioral question #{questions_asked}.
+            The candidate responded: "{user_message}"
 
-Analyze their answer:
-- If it's detailed and complete: Briefly acknowledge (1 sentence), then ask the NEXT behavioral question
-- If it's vague or incomplete: Ask ONE follow-up to get more detail (STAR method: Situation, Task, Action, Result)
-- If they mentioned something interesting: Probe deeper with ONE specific follow-up
-- If it's OFF-TOPIC, NONSENSICAL, or EVASIVE: Address it directly like a real interviewer would (see your system prompt for examples)
+            This is their response to your CASUAL GREETING, not a behavioral question yet.
 
-CRITICAL REMINDERS:
-- Do NOT ask about the same project/experience again
-- Vary your question topics (if you asked teamwork, now ask problem-solving, etc.)
-- Reference DIFFERENT parts of their resume
-- If you asked about Project A, now ask about Project B or their internship
-- Ask ONE question only
-- SHOW VARIETY in your phrasing and transitions - don't sound robotic
+            CRITICAL ANALYSIS:
+            - If they said something POSITIVE/NEUTRAL like "good", "fine", "great", "okay", "alright", "not bad", etc.:
+            * That's NORMAL for a greeting response
+            * DO NOT ask them to elaborate
+            * Simply acknowledge warmly and transition to the FIRST behavioral question
+            
+            - If they said something NEGATIVE like "bad", "not good", "terrible", "rough", "stressful", "not great", etc.:
+            * Show empathy and acknowledge their feelings
+            * Offer brief understanding/encouragement
+            * Then gently transition to the interview
+            * Keep it professional but human
 
-Examples of good follow-ups if their answer was vague:
-- "Can you be more specific about what YOU did in that situation?"
-- "What was your exact contribution to solving that problem?"
-- "How did you make that technical decision?"
-- "What was the outcome - did it work?"
+            EXAMPLES FOR POSITIVE/NEUTRAL RESPONSES:
+            - "Great to hear! I'm doing well too. So let's get started - tell me a bit about yourself and what interests you in software engineering."
+            - "Good good! Glad you're doing well. Alright, let's dive in - walk me through your background and how you got into programming."
+            - "Awesome! I'm having a good day as well. So, I'd love to start by hearing about your journey into software engineering."
+            - "Nice! Well let's jump right in then. Tell me about yourself - what drew you to software engineering?"
 
-Examples of good transitions to next question (if their answer was complete):
-- "That makes sense. Now, tell me about..." [NEW TOPIC]
-- "Good example. I'm also curious about..." [DIFFERENT EXPERIENCE]
-- "Great. Let me ask you about something else..." [DIFFERENT PROJECT/COMPANY]
-- "Interesting. Moving on..." [NEW TOPIC]
-- "I appreciate that perspective. Let's switch gears..." [DIFFERENT AREA]
+            EXAMPLES FOR NEGATIVE RESPONSES:
+            - "Oh, I'm sorry to hear that. I appreciate you taking the time despite having a rough day. Hopefully this conversation will be a nice distraction. So, let's start - tell me a bit about yourself and your interest in software engineering."
+            - "That's tough, I understand. Well, let's try to make this as smooth as possible for you. Why don't we start with you telling me about your background in programming?"
+            - "I hear you - some days are like that. I appreciate you showing up anyway. Let's dive in - walk me through your journey into software engineering."
+            - "Sorry you're having a rough one. Well, hopefully we can keep this relaxed and conversational. So, tell me about yourself - what got you interested in software engineering?"
 
-Keep your response conversational and natural. Max 3-4 sentences total. VARY YOUR LANGUAGE."""
+            Keep it natural, empathetic, and smooth. DO NOT dwell on their bad day - acknowledge briefly and move forward professionally.
+            VARY your phrasing - don't use the same transition every time."""
+                else:
+                    # ts is a response to an actual behavioral question
+                    prompt = f"""The candidate just answered: "{user_message}"
+
+            This was their response to behavioral question #{questions_asked}.
+
+            Analyze their answer:
+            - If it's detailed and complete: Briefly acknowledge (1 sentence), then ask the NEXT behavioral question
+            - If it's vague or incomplete: Ask ONE follow-up to get more detail (STAR method: Situation, Task, Action, Result)
+            - If they mentioned something interesting: Probe deeper with ONE specific follow-up
+            - If it's OFF-TOPIC, NONSENSICAL, or EVASIVE: Address it directly like a real interviewer would (see your system prompt for examples)
+
+            CRITICAL REMINDERS:
+            - Do NOT ask about the same project/experience again
+            - Vary your question topics (if you asked teamwork, now ask problem-solving, etc.)
+            - Reference DIFFERENT parts of their resume
+            - If you asked about Project A, now ask about Project B or their internship
+            - Ask ONE question only
+            - SHOW VARIETY in your phrasing and transitions - don't sound robotic
+
+            Examples of good follow-ups if their answer was vague:
+            - "Can you be more specific about what YOU did in that situation?"
+            - "What was your exact contribution to solving that problem?"
+            - "How did you make that technical decision?"
+            - "What was the outcome - did it work?"
+
+            Examples of good transitions to next question (if their answer was complete):
+            - "That makes sense. Now, tell me about..." [NEW TOPIC]
+            - "Good example. I'm also curious about..." [DIFFERENT EXPERIENCE]
+            - "Great. Let me ask you about something else..." [DIFFERENT PROJECT/COMPANY]
+            - "Interesting. Moving on..." [NEW TOPIC]
+            - "I appreciate that perspective. Let's switch gears..." [DIFFERENT AREA]
+
+            Keep your response conversational and natural. Max 2-3 sentences total. VARY YOUR LANGUAGE."""
                 
                 ai_response = self._call_gemini(system_prompt, prompt)
                 
