@@ -53,8 +53,8 @@ def login(user_credentials: UserLogin, response: Response, db: Session = Depends
         samesite="lax",
         max_age=int((refresh_token.expire_at-datetime.utcnow()).total_seconds())
     )
-    #retuning refrshtoken for dev only
-    return {"message": "Login successful", "refresh token": refresh_token}
+   
+    return {"message": "Login successful"}
 
 @router.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_user)):
@@ -88,7 +88,7 @@ def refresh(response: Response, request: Request, db: Session = Depends(get_db))
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     
-    # Extend refresh token cookie (optional - keeps user logged in longer)
+    #
     response.set_cookie(
         key="refresh_token",
         value=rtoken,

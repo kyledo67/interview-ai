@@ -6,7 +6,7 @@ const authcontext = createContext();
 export const Auth = () => {
     const context = useContext(authcontext);
     if (!context) {
-        throw new Error('Auth must be used within authprovider');
+        throw new Error('no authprovider');
     }
     return context;
 };
@@ -18,10 +18,12 @@ export const Authprovider = ({ children }) => {
 
    
     useEffect(() => {
+        console.log('🔄 useEffect: Initial mount, calling checkauth');
         checkauth();
         
-        // Cleanup interval on unmount
+        // clean interval on unmount
         return () => {
+            console.log('🧹 useEffect: Component unmounting, clearing interval');
             if (refreshIntervalRef.current) {
                 clearInterval(refreshIntervalRef.current);
             }
@@ -31,8 +33,10 @@ export const Authprovider = ({ children }) => {
     // set up automatic token refresh when user is authenticated
     useEffect(() => {
         if (user) {
+            console.log('   Setting up token refresh');
             setupTokenRefresh();
         } else {
+            console.log('   Clearing token refresh');
             clearTokenRefresh();
         }
     }, [user]);
@@ -51,27 +55,28 @@ export const Authprovider = ({ children }) => {
         if (refreshIntervalRef.current) {
             clearInterval(refreshIntervalRef.current);
             refreshIntervalRef.current = null;
+        } else {
+            console.log('No interva');
         }
     };
 
  
     const refreshToken = async () => {
         try {
+            console.log('   Fetching /refresh endpoint...');
             const response = await fetch('http://localhost:8001/refresh', {
                 method: 'POST',
                 credentials: 'include'
             });
 
+            console.log('   Refresh response status:', response.status);
             if (response.ok) {
-                console.log('Token refreshed successfully');
                 return true;
             } else {
-                console.log('Token refresh failed, logging out...');
                 await logout();
                 return false;
             }
         } catch (error) {
-            console.error('Token refresh error:', error);
             await logout();
             return false;
         }
@@ -79,34 +84,32 @@ export const Authprovider = ({ children }) => {
 
    
     const apiCall = async (url, options = {}) => {
-       
-        console.log(url);
+
         try {
+            console.log('   Making initial fetch...');
             let response = await fetch(url, {
                 ...options,
                 credentials: 'include'
             });
 
+            console.log('   Response status:', response.status);
     
             if (response.status === 401) {
-                console.log('Got 401, attempting token refresh...');
                 const refreshSuccess = await refreshToken();
                 
                 if (refreshSuccess) {
-                    // Retry the original request
                     response = await fetch(url, {
                         ...options,
                         credentials: 'include'
                     });
                 } else {
-                   
-                    throw new Error('Authentication failed');
+                    throw new Error('auth failed');
                 }
             }
 
             return response;
         } catch (error) {
-            console.error('API call failed:', error);
+            console.error(error)
             throw error;
         }
     };
@@ -115,6 +118,7 @@ export const Authprovider = ({ children }) => {
     const checkauth = async () => {
         try {
             const response = await apiCall('http://localhost:8001/me');
+            
             if (response.ok) {
                 const userdata = await response.json();
                 setuser(userdata); 
@@ -122,16 +126,20 @@ export const Authprovider = ({ children }) => {
                 setuser(null);
             }
         } catch (error) {
-            console.error('Auth check failed:', error);
+            
             setuser(null);
         } finally {
+            
             setloading(false); 
         }
     };
 
 
     const login = async (email, password) => {
+        
+        
         try {
+            console.log('   Fetching /login endpoint...');
             const response = await fetch('http://localhost:8001/login', {
                 method: 'POST',
                 headers: {
@@ -141,22 +149,37 @@ export const Authprovider = ({ children }) => {
                 body: JSON.stringify({ email, password }),
             });
 
+            console.log('   Login response status:', response.status);
+            console.log('   Login response ok:', response.ok);
+            console.log('   Login response headers:', Object.fromEntries(response.headers.entries()));
+
             if (response.ok) {
                 const data = await response.json();
+             
                 
+               
                 await checkauth();
+                console.log('heyo');
                 return { success: true, message: data.message };
             } else {
+                console.log('brooo');
                 const error = await response.json();
+                console.error('   Error detail:', error);
                 return { success: false, message: error.detail };
             }
         } catch (error) {
+            console.error(error.name);
+            console.error(error.message);
+            console.error('Full error:', error);
             return { success: false, message: 'error' };
         }
     };
 
     const register = async (email, password) => {
+        
+        
         try {
+            console.log('   Fetching /register endpoint...');
             const response = await fetch('http://localhost:8001/register', {
                 method: 'POST',
                 headers: {
@@ -166,13 +189,23 @@ export const Authprovider = ({ children }) => {
                 body: JSON.stringify({ email, password })
             });
 
+            console.log('   Register response status:', response.status);
+            console.log('   Register response ok:', response.ok);
+            console.log('   Register response headers:', Object.fromEntries(response.headers.entries()));
+
             if (response.ok) {
+                console.log('success');
                 return { success: true, message: 'Registration successful' };
             } else {
+                console.log('register failed');
                 const error = await response.json();
+                console.error('Error:', error);
                 return { success: false, message: error.detail };
             }
         } catch (error) {
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+            console.error('Full error:', error);
             return { success: false, message: ' error' };
         }
     };
@@ -181,10 +214,11 @@ export const Authprovider = ({ children }) => {
     const logout = async () => {
         clearTokenRefresh();
         
+        console.log('   Clearing cookies...');
         // Clear cookies by making them expire immediately
         document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         document.cookie = "refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        setuser(null); 
+        setuser(null);
     };
 
     // Values available to all components using Auth()
