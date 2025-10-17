@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 
 const authcontext = createContext();
 
-// Custom hook to use auth anywhere
+
 export const Auth = () => {
     const context = useContext(authcontext);
     if (!context) {
@@ -11,13 +11,12 @@ export const Auth = () => {
     return context;
 };
 
-// Wrapper component that provides auth to all child components
 export const Authprovider = ({ children }) => {
     const [user, setuser] = useState(null);
     const [loading, setloading] = useState(true);
     const refreshIntervalRef = useRef(null);
 
-    // Check if user is already logged in when app starts
+   
     useEffect(() => {
         checkauth();
         
@@ -29,7 +28,7 @@ export const Authprovider = ({ children }) => {
         };
     }, []);
 
-    // Set up automatic token refresh when user is authenticated
+    // set up automatic token refresh when user is authenticated
     useEffect(() => {
         if (user) {
             setupTokenRefresh();
@@ -38,9 +37,8 @@ export const Authprovider = ({ children }) => {
         }
     }, [user]);
 
-    // Setup automatic token refresh every 25 minutes (before 30min expiry)
     const setupTokenRefresh = () => {
-        clearTokenRefresh(); // Clear any existing interval
+        clearTokenRefresh(); 
         
         refreshIntervalRef.current = setInterval(async () => {
             console.log('Auto-refreshing token...');
@@ -48,7 +46,7 @@ export const Authprovider = ({ children }) => {
         }, 25 * 60 * 1000); 
     };
 
-    // Clear the refresh interval
+   
     const clearTokenRefresh = () => {
         if (refreshIntervalRef.current) {
             clearInterval(refreshIntervalRef.current);
@@ -56,7 +54,7 @@ export const Authprovider = ({ children }) => {
         }
     };
 
-    // Refresh the access token using refresh token
+ 
     const refreshToken = async () => {
         try {
             const response = await fetch('http://localhost:8001/refresh', {
@@ -79,9 +77,9 @@ export const Authprovider = ({ children }) => {
         }
     };
 
-    // api call function that handles token refresh automatically
+   
     const apiCall = async (url, options = {}) => {
-        // debug: making sure it's the right url
+       
         console.log(url);
         try {
             let response = await fetch(url, {
@@ -89,7 +87,7 @@ export const Authprovider = ({ children }) => {
                 credentials: 'include'
             });
 
-            // If  401, try to refresh token and retry
+    
             if (response.status === 401) {
                 console.log('Got 401, attempting token refresh...');
                 const refreshSuccess = await refreshToken();
@@ -101,7 +99,7 @@ export const Authprovider = ({ children }) => {
                         credentials: 'include'
                     });
                 } else {
-                    // Refresh failed, user will be logged out by refreshToken function
+                   
                     throw new Error('Authentication failed');
                 }
             }
@@ -113,13 +111,13 @@ export const Authprovider = ({ children }) => {
         }
     };
 
-    // Calls backend to see if user has valid session cookies
+  
     const checkauth = async () => {
         try {
-            const response = await apiCall('/me');
+            const response = await apiCall('http://localhost:8001/me');
             if (response.ok) {
                 const userdata = await response.json();
-                setuser(userdata); // Store user info in state
+                setuser(userdata); 
             } else {
                 setuser(null);
             }
@@ -127,11 +125,11 @@ export const Authprovider = ({ children }) => {
             console.error('Auth check failed:', error);
             setuser(null);
         } finally {
-            setloading(false); // Stop loading spinner
+            setloading(false); 
         }
     };
 
-    // Handles login form submission
+
     const login = async (email, password) => {
         try {
             const response = await fetch('http://localhost:8001/login', {
@@ -139,13 +137,13 @@ export const Authprovider = ({ children }) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                credentials: 'include', // Important: allows cookies to be set
+                credentials: 'include', 
                 body: JSON.stringify({ email, password }),
             });
 
             if (response.ok) {
                 const data = await response.json();
-                // Check current user after successful login
+                
                 await checkauth();
                 return { success: true, message: data.message };
             } else {
@@ -157,7 +155,6 @@ export const Authprovider = ({ children }) => {
         }
     };
 
-    // Handles registration form submission
     const register = async (email, password) => {
         try {
             const response = await fetch('http://localhost:8001/register', {
@@ -165,6 +162,7 @@ export const Authprovider = ({ children }) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({ email, password })
             });
 
@@ -179,15 +177,14 @@ export const Authprovider = ({ children }) => {
         }
     };
 
-    // Clears user session by removing cookies
+   
     const logout = async () => {
-        // Clear the refresh interval
         clearTokenRefresh();
         
         // Clear cookies by making them expire immediately
         document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         document.cookie = "refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        setuser(null); // Clear user from state
+        setuser(null); 
     };
 
     // Values available to all components using Auth()
@@ -197,9 +194,9 @@ export const Authprovider = ({ children }) => {
         register,
         logout,
         loading,
-        isauthenticated: !!user, // Converts user object to true/false
+        isauthenticated: !!user, 
         apiCall, 
-        refreshToken // Expose manual refresh function if needed
+        refreshToken 
     };
 
     return (
