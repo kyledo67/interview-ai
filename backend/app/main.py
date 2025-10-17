@@ -35,10 +35,10 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-app.include_router(auth.router)
-app.include_router(resume.router)
-app.include_router(interviews.router)
-app.include_router(code.router, prefix="/code", tags=["code"])
-app.include_router(tts.router, tags=["tts"])
+app.include_router(auth.router, prefix="/api")  
+app.include_router(resume.router, prefix="/api")
+app.include_router(interviews.router, prefix="/api")
+app.include_router(code.router, prefix="/api/code", tags=["code"])
+app.include_router(tts.router, prefix="/api", tags=["tts"])
 
 app.mount("/", StaticFiles(directory="../frontend/build", html=True), name="static")

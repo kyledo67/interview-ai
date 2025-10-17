@@ -7,7 +7,6 @@ services:
     container_name: interview-ai-github-backend
     ports:
       - "8001:8000"
-      - "8000:8000"
     volumes:
       - ./backend:/backend/
     working_dir: /app/backend

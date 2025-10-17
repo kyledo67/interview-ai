@@ -46,7 +46,6 @@ const InterviewPage = () => {
   const [interviewId, setInterviewId] = useState(null);
   const [transcript, setTranscript] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
-  
   const [isAIThinking, setIsAIThinking] = useState(false);
   const [candidateLevel, setCandidateLevel] = useState('');
   const [currentAIMessage, setCurrentAIMessage] = useState('');
@@ -61,7 +60,8 @@ const InterviewPage = () => {
   const speechSynthesisRef = useRef(null);
   const lastTranscriptLengthRef = useRef(0);
   const isInterviewStartingRef = useRef(false);
-
+  const speechDebounceTimerRef = useRef(null);
+  const pendingSpeechRef = useRef('');
   const languages = [
     { id: 71, name: "Python", monaco: "python" }, 
     { id: 62, name: "Java", monaco: "java" },
@@ -76,7 +76,7 @@ const InterviewPage = () => {
   }, []); 
 
   useEffect(() => {
-    return () => {
+  return () => {
       if (speechRecognitionRef.current) {
         speechRecognitionRef.current.stop();
       }
@@ -85,6 +85,9 @@ const InterviewPage = () => {
       }
       if (speechSynthesisRef.current) {
         window.speechSynthesis.cancel();
+      }
+      if (speechDebounceTimerRef.current) {
+        clearTimeout(speechDebounceTimerRef.current);
       }
     };
   }, []);
@@ -222,7 +225,7 @@ int main() {
       
       const recognition = speechRecognitionRef.current;
       recognition.continuous = true;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
       recognition.maxAlternatives = 1;
       
@@ -237,13 +240,36 @@ int main() {
           return;
         }
         
+        // Clear existing debounce timer
+        if (speechDebounceTimerRef.current) {
+          clearTimeout(speechDebounceTimerRef.current);
+        }
+        
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
         for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            const transcriptText = event.results[i][0].transcript.trim();
-            if (transcriptText) {
-              addToTranscript('User', transcriptText);
-            }
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
           }
+        }
+        
+        // Store the current transcript (final + interim)
+        const currentText = (finalTranscript + interimTranscript).trim();
+        
+        if (currentText) {
+          pendingSpeechRef.current = currentText;
+          
+          // Wait 2 seconds of silence before sending to transcript
+          speechDebounceTimerRef.current = setTimeout(() => {
+            if (pendingSpeechRef.current && !isAISpeakingRef.current) {
+              addToTranscript('User', pendingSpeechRef.current);
+              pendingSpeechRef.current = '';
+            }
+          }, 1500); 
         }
       };
       
@@ -264,7 +290,14 @@ int main() {
       
       recognition.onend = () => {
         console.log('Speech ended');
-        
+        if (pendingSpeechRef.current && !isAISpeakingRef.current) {
+          if (speechDebounceTimerRef.current) {
+            clearTimeout(speechDebounceTimerRef.current);
+          }
+          addToTranscript('User', pendingSpeechRef.current);
+          pendingSpeechRef.current = '';
+        }
+ 
         if (isMicOnRef.current) {
           console.log('restarting');
           setTimeout(() => {
@@ -291,7 +324,7 @@ int main() {
         }
       };
       
-      if (isMicOn) {
+      if (isMicOnRef.current) {
         try {
           recognition.start();
           setIsRecording(true);
@@ -308,8 +341,15 @@ int main() {
   const toggleMicrophone = () => {
     const newMicState = !isMicOn;
     setIsMicOn(newMicState);
-    
+    isMicOnRef.current = newMicState;
+
+    if (speechDebounceTimerRef.current) {
+      clearTimeout(speechDebounceTimerRef.current);
+    }
+    pendingSpeechRef.current = '';
+
     if (newMicState) {
+      
       if (speechRecognitionRef.current) {
         try {
           speechRecognitionRef.current.abort();
@@ -322,13 +362,15 @@ int main() {
       setIsRecording(false);
       
       setTimeout(() => {
-        if (isMicOn) {
+        
+        if (newMicState) {
           console.log('new instance');
           initializeSpeechRecognition();
         }
       }, 300);
       
     } else {
+      
       if (speechRecognitionRef.current) {
         try {
           speechRecognitionRef.current.abort();
@@ -697,13 +739,17 @@ int main() {
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
+    if (speechDebounceTimerRef.current) {
+      clearTimeout(speechDebounceTimerRef.current);
+    }
+    pendingSpeechRef.current = '';
     
     await endInterviewWithBackend();
     
     console.log('Interview ended');
     setShowEndCallDialog(false);
     
-    window.location.href = '/';
+    window.location.href = '/results';
   };
 
   const cancelEndCall = () => {
@@ -827,7 +873,7 @@ int main() {
                 <div className="video-label-small">
                   Interviewer
                 </div>
-                {(isAIThinking || isAISpeaking) && (
+                {isAIThinking && (
                   <div style={{ 
                     position: 'absolute', 
                     top: '5px', 
@@ -838,7 +884,7 @@ int main() {
                     fontSize: '10px',
                     color: 'white'
                   }}>
-                    {isAIThinking ? '...' : '🔊'}
+                    ...
                   </div>
                 )}
               </div>

@@ -136,12 +136,15 @@ CRITICAL INSTRUCTIONS:
 - DO NOT ask behavioral questions yet
 - DO NOT mention the interview format or structure
 - Sound genuinely friendly and welcoming, not robotic
+- If the User says something off topic, cut off sentences, or something that doesn't make sense, then ask them to repeat it or say something like "Sorry I didn't get that."
 
 Examples of good greetings:
 - "Hi [name], thanks for joining me today! How has your day been so far?"
 - "Hey [name], great to meet you! How are you doing today?"
 - "Hi [name], thanks for taking the time to chat with me. How's everything going?"
 - "[name], good to see you! How's your day treating you?"
+- "Constance and I just bagged a M&A deal in his Gstaad, anyways how was your day?"
+
 
 VARY your phrasing - don't use the exact same greeting every time."""
         
@@ -218,6 +221,7 @@ Analyze their answer:
 - If it's detailed and complete: Briefly acknowledge (1 sentence), then ask the NEXT behavioral question
 - If it's vague or incomplete: Ask ONE follow-up to get more detail (STAR method: Situation, Task, Action, Result)
 - If they mentioned something interesting: Probe deeper with ONE specific follow-up
+- If it's OFF-TOPIC, NONSENSICAL, or EVASIVE: Address it directly like a real interviewer would (see your system prompt for examples)
 
 CRITICAL REMINDERS:
 - Do NOT ask about the same project/experience again
@@ -301,6 +305,7 @@ Respond naturally. Guide them through the problem:
 - Help with syntax/library usage if they forget
 - Provide feedback on their code
 - DO NOT solve it for them
+- If they're giving up or being evasive, address it realistically
 
 Be conversational and supportive. VARY your responses - use different phrasings and transitions."""
                 
@@ -706,7 +711,7 @@ Explanation: The endWord "cog" is not in wordList, therefore there is no valid t
         technical_duration_minutes: float
     ) -> Dict:
         """
-        Generate final interview evaluation
+        Generate final interview evaluation with more realistic/harsh scoring
         """
         transcript_text = "\n".join([
             f"{msg['speaker']}: {msg['message']}"
@@ -727,20 +732,56 @@ FINAL CODE:
 {final_code if final_code else "No code submitted"}
 ```
 
+SCORING GUIDELINES - BE REALISTIC AND RIGOROUS:
+
+BEHAVIORAL (0-10):
+- 8-10: Excellent STAR responses, specific details, shows strong self-awareness and communication
+- 6-7: Good responses with some details, mostly coherent but may lack depth
+- 4-5: Vague responses, lacks specifics, poor structure, some relevant content
+- 2-3: Very weak responses, mostly off-topic, poor communication
+- 0-1: Uncooperative, nonsensical, or completely off-topic answers
+
+TECHNICAL (0-10):
+- 9-10: Solved problem optimally with clean code, explained approach clearly, discussed complexity
+- 7-8: Solved problem with working solution, may not be optimal but demonstrates understanding
+- 5-6: Partial solution, logical approach but significant bugs or incomplete
+- 3-4: Struggled significantly, needed heavy hints, minimal working code
+- 0-2: Could not solve, no coherent approach, gave up or wrote no meaningful code
+
+OVERALL (0-10):
+- Weight: 40% behavioral + 60% technical
+- Be honest about red flags (evasiveness, lack of preparation, poor problem-solving)
+- Don't inflate scores - average candidates should score 4-6, not 7-8
+
+RED FLAGS TO PENALIZE HEAVILY:
+- Off-topic or nonsensical answers
+- Inability to explain their own code
+- Copy-paste mentality without understanding
+- Poor communication or unwillingness to engage
+- Gave up easily on technical problem
+- No questions about the role (shows lack of interest)
+
 Provide evaluation in JSON:
 {{
   "behavioral_score": <0-10>,
   "technical_score": <0-10>,
   "overall_score": <0-10>,
-  "strengths": [<3-4 items>],
-  "improvements": [<3-4 items>],
-  "detailed_feedback": "<2-3 paragraphs>",
-  "recommendation": "<Strong Hire | Hire | No Hire | Strong No Hire>"
+  "strengths": [<2-4 specific items>],
+  "improvements": [<3-5 specific items with actionable advice>],
+  "detailed_feedback": "<2-3 paragraphs covering both behavioral and technical performance>",
+  "recommendation": "<Strong Hire | Hire | No Hire | Strong No Hire>",
+  "red_flags": [<list any concerning behaviors or responses>]
 }}
 
-Be fair. Most candidates score 5-7."""
+RECOMMENDATION GUIDELINES:
+- Strong Hire (9-10): Exceptional candidate, would hire immediately
+- Hire (7-8): Solid candidate, good fit for the role
+- No Hire (4-6): Not ready, significant gaps or concerns
+- Strong No Hire (0-3): Very weak performance or major red flags
+
+BE HONEST. Most candidates should be "No Hire" or "Hire" range (4-8). Strong Hire should be rare."""
         
-        system_prompt = "You are an expert technical interviewer. Respond ONLY with valid JSON."
+        system_prompt = "You are a senior technical interviewer known for honest, rigorous evaluations. Do not inflate scores. Respond ONLY with valid JSON."
         
         response = self._call_gemini(system_prompt, evaluation_prompt)
         
@@ -751,16 +792,20 @@ Be fair. Most candidates score 5-7."""
             else:
                 evaluation = json.loads(response)
             
+            # Ensure red_flags exists
+            evaluation.setdefault("red_flags", [])
+            
             return evaluation
         except json.JSONDecodeError:
             return {
-                "behavioral_score": 5,
-                "technical_score": 5,
-                "overall_score": 5,
-                "strengths": ["Completed interview"],
-                "improvements": ["Continue practicing"],
-                "detailed_feedback": "Evaluation unavailable",
-                "recommendation": "No Hire"
+                "behavioral_score": 3,
+                "technical_score": 2,
+                "overall_score": 3,
+                "strengths": ["Attended interview"],
+                "improvements": ["Needs significant practice with behavioral questions", "Requires stronger technical foundation", "Work on communication skills"],
+                "detailed_feedback": "Evaluation unavailable due to processing error.",
+                "recommendation": "No Hire",
+                "red_flags": ["Evaluation processing failed"]
             }
     
     def _get_behavioral_system_prompt(self, resume_data: Dict, questions_asked: int) -> str:
@@ -794,6 +839,44 @@ SPECIAL INSTRUCTIONS FOR NON-TRADITIONAL CANDIDATES:
   * Don't expect traditional SWE internship stories
   * Be encouraging about their career transition
 """
+        
+        # Add realism rules for ALL candidates
+        realism_rules = """
+🚨 CRITICAL: BE REALISTIC ABOUT OFF-TOPIC/POOR ANSWERS 🚨
+
+If the candidate gives an answer that is:
+- Completely off-topic (e.g., "I like pizzas" when asked about technical experience)
+- Nonsensical or incoherent
+- Evasive or uncooperative (e.g., "what if I don't want to")
+- Shows they're not taking the interview seriously
+
+YOU MUST respond like a REAL interviewer would:
+- Show mild concern or confusion: "I'm not sure I understand how that relates to the question"
+- Gently redirect: "That's... interesting, but let's get back to the question. Can you tell me about [original question]?"
+- Be slightly firm if needed: "I need you to answer the question I asked. Let me rephrase..."
+- If they continue being uncooperative: "I'm sensing some hesitation here. Are you comfortable continuing with this interview?"
+
+EXAMPLES OF REALISTIC RESPONSES:
+User: "I like pizzas"
+You: "Okay... I'm not sure how that relates to your technical experience. Let me ask again - tell me about a challenging project you've worked on."
+
+User: "What if I don't want to?"
+You: "I understand interviews can be stressful, but I do need you to engage with the questions. Are you ready to continue, or would you prefer to reschedule?"
+
+User: *gibberish or off-topic rambling*
+You: "I'm having trouble following. Could you focus on answering the specific question about [topic]?"
+
+User: *very vague answer with no details*
+You: "I need you to be more specific. What exactly did YOU do in that situation? Walk me through your actions step by step."
+
+DO NOT:
+- Say "That's an interesting response" when it's clearly not relevant
+- Immediately pivot to the next question without addressing the issue
+- Be overly accommodating to nonsense answers
+- Pretend everything is fine when it's not
+- Let them deflect or avoid the question
+
+A real interviewer would be professional but would NOT ignore red flags. Address issues directly but professionally."""
         
         # Determine question focus
         question_focus = ""
@@ -884,6 +967,8 @@ CANDIDATE LEVEL: {level.upper()}
 
 {non_traditional_note}
 
+{realism_rules}
+
 CRITICAL RULES:
 1. Resume PDF is attached - see ALL experience and projects
 2. PRIORITIZE SWE work experience over projects (unless non-traditional)
@@ -897,7 +982,7 @@ CRITICAL RULES:
 {question_focus}
 
 CONVERSATION STYLE:
-- Warm, professional, encouraging
+- Warm, professional, encouraging (but realistic about poor answers)
 - Show genuine interest and curiosity
 - VARY your transitions and acknowledgments:
   * "That makes sense", "Interesting", "I see", "Good example", "Great", "I appreciate that", "Understood", "Got it", "Makes sense"
@@ -924,7 +1009,7 @@ Check resume PDF for multiple internships/projects. Reference different ones."""
     
     def _get_technical_system_prompt(self, level: str) -> str:
         """
-        Generate system prompt for technical phase
+        Generate system prompt for technical phase with more realism
         """
         prompt = f"""You are an experienced technical interviewer for a Software Engineering Internship position.
 
@@ -935,19 +1020,29 @@ YOUR ROLE:
 - Guide through problem
 - See code in real-time
 - Ask about approach first
-- Provide hints (NOT solutions)
+- Provide hints (NOT solutions or algorithms)
 - Help with syntax if forgotten
 - Analyze results when they run code
 - Discuss time/space complexity
 
-GUIDANCE: {'Be more helpful, clearer hints' if level == 'intern' else 'Expect them to drive more'}
+BE REALISTIC ABOUT STRUGGLES:
+- If they're completely stuck for 5+ minutes: "It seems like you're struggling with this approach. Let me give you a hint: [general direction]"
+- If they ask for the solution directly: "I can't give you the solution, but I can help guide you. What approaches have you considered?"
+- If their approach is fundamentally wrong: "Hmm, I think that approach might be difficult. Have you considered [alternative direction]?"
+- If they copy-paste without understanding: "Can you walk me through what this code does? Why did you choose this approach?"
+- If they're giving up: "I understand this is challenging. Let's break it down into smaller steps. What's the first thing we need to do?"
 
-Be conversational, not robotic. VARY your language and responses:
+GUIDANCE: {'Be more helpful with clearer hints, but still make them think' if level == 'intern' else 'Expect them to drive more independently, fewer hints'}
+
+Be conversational but realistic. Don't pretend everything is going well if it's not.
+
+VARY your language and responses:
 - Different ways to ask about approach: "What's your plan?", "How would you tackle this?", "Walk me through your thinking", "What approach are you considering?"
 - Different hints: "Think about...", "Consider...", "What if you...", "Have you thought about...", "Another approach might be..."
 - Different encouragements: "Good thinking", "You're on the right track", "That makes sense", "Exactly", "Nice", "Good idea"
+- When stuck: "Let's take a step back", "What's tripping you up?", "What have you tried?", "Break this down for me"
 
-Don't use the same phrases every time."""
+DO NOT use a phrase you have already used."""
         
         return prompt
     
@@ -958,7 +1053,7 @@ Don't use the same phrases every time."""
         try:
             full_prompt = f"{system_prompt}\n\n{user_prompt}"
             
-            # Include resume if exists
+        
             if self.uploaded_resume_file:
                 response = self.client.models.generate_content(
                     model=self.model_name,
@@ -973,4 +1068,4 @@ Don't use the same phrases every time."""
             return response.text.strip()
         except Exception as e:
             print(f"Gemini API error: {e}")
-            return "Hm? sorry I didnt get that."
+            return "Sorry I didn't get that I think I'm dying."
