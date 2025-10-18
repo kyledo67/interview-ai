@@ -749,7 +749,7 @@ int main() {
     console.log('Interview ended');
     setShowEndCallDialog(false);
     
-    window.location.href = '/results';
+    navigate('/results', { replace: true});
   };
 
   const cancelEndCall = () => {
@@ -781,6 +781,44 @@ int main() {
             className={`control-button ${isCameraOn ? 'camera-on' : 'camera-off'}`}
           >
             {isCameraOn ? <Camera size={20} /> : <CameraOff size={20} />}
+          </button>
+
+          <button
+            onClick={async () => {
+              if (currentPhase === 'technical') return;
+              
+              try {
+                const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/get-technical-problem`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    candidate_level: candidateLevel
+                  })
+                });
+                
+                if (response.ok) {
+                  const data = await response.json();
+                  transitionToTechnical(data.technical_data);
+                } else {
+                  console.error('Failed to fetch technical problem');
+                }
+              } catch (error) {
+                console.error('Error fetching technical problem:', error);
+              }
+            }}
+            className="control-button"
+            style={{ 
+              background: currentPhase === 'technical' ? '#4CAF50' : '#2196F3',
+              marginRight: '10px'
+            }}
+            disabled={currentPhase === 'technical'}
+          >
+            <span style={{ fontSize: '12px' }}>
+              {currentPhase === 'technical' ? '✓ Technical' : 'Switch to Technical'}
+            </span>
           </button>
 
           <button 

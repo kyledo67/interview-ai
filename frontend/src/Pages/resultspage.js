@@ -75,14 +75,14 @@ const ResultsPage = () => {
     <div className="results-container">
       <div className="results-content">
         
-        {/* Header */}
+
         <div className="results-header">
           <Trophy size={48} color="#3b82f6" />
           <h1>Interview Results</h1>
           <p className="results-subtitle">Here's how you performed</p>
         </div>
 
-        {/* Scores Section */}
+    
         <div className="scores-grid">
           <div className="score-card">
             <div className="score-label">Behavioral</div>

@@ -61,7 +61,7 @@ def start_interview(
             "is_non_traditional": resume_data.get("is_non_traditional", False),
             "background_context": resume_data.get("background_context", ""),
             "mode": "behavioral",
-            "questions_asked": 1,
+            "questions_asked": 0,  # ← Changed from 1 to 0
             "behavioral_start_time": datetime.now().isoformat(),
             "technical_start_time": None,
             "technical_question": None,
@@ -93,12 +93,9 @@ def process_interview_message(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Process user message during interview
-    """
     interview_service: InterviewService = request.app.state.interview_service
     
-    # Get interview
+
     interview = db.query(Interview).filter(
         Interview.id == interview_id,
         Interview.user_id == user.id,
@@ -108,31 +105,31 @@ def process_interview_message(
     if not interview:
         raise HTTPException(status_code=404, detail="Active interview not found")
     
-    # Add user message to transcript
+    
     interview.transcript.append({
         "timestamp": datetime.now().isoformat(),
         "speaker": "User",
         "message": message_data.message
     })
     
-    # Build resume_data with all necessary fields for AI processing
+   
     resume_data = {
         "level": interview.meta_info["candidate_level"],
         "is_non_traditional": interview.meta_info.get("is_non_traditional", False),
         "background_context": interview.meta_info.get("background_context", "")
     }
     
-    # Calculate behavioral duration
+    # calc behavioral duration
     behavioral_start = datetime.fromisoformat(interview.meta_info["behavioral_start_time"])
     behavioral_duration = (datetime.now() - behavioral_start).total_seconds() / 60
     
-    # Calculate technical duration
+    # calc technical duration
     technical_duration = 0
     if interview.meta_info.get("technical_start_time"):
         technical_start = datetime.fromisoformat(interview.meta_info["technical_start_time"])
         technical_duration = (datetime.now() - technical_start).total_seconds() / 60
     
-    # Process message with AI
+    
     result = interview_service.process_message(
         user_message=message_data.message,
         resume_data=resume_data,
@@ -152,7 +149,7 @@ def process_interview_message(
         "message": result["ai_response"]
     })
     
-    # Update interview state based on mode switches
+    
     if result["should_switch_mode"]:
         if result["new_mode"] == "technical":
             interview.meta_info["mode"] = "technical"
@@ -162,9 +159,26 @@ def process_interview_message(
             interview.meta_info["mode"] = "candidate_questions"
             interview.meta_info["asked_candidate_questions"] = True
     else:
-        # Increment question count only in behavioral mode
+        # Increment question count only in behavioral mode AND only if not a greeting response
         if interview.meta_info["mode"] == "behavioral":
-            interview.meta_info["questions_asked"] += 1
+            # Only increment if we've moved past the greeting (questions_asked >= 1)
+            # OR if the user's message was substantial (not just "good"/"fine")
+            user_msg_lower = message_data.message.lower().strip()
+            greeting_responses = [
+                'good', 'fine', 'great', 'ok', 'okay', 'alright', 'well',
+                'bad', 'not good', 'terrible', 'rough', 'stressful', 'not great',
+                'im good', "i'm good", 'im fine', "i'm fine", 'pretty good', 'not bad'
+            ]
+            
+            is_greeting_response = (
+                interview.meta_info["questions_asked"] == 0 and
+                len(message_data.message.split()) <= 5 and
+                any(phrase in user_msg_lower for phrase in greeting_responses)
+            )
+            
+      
+            if not is_greeting_response:
+                interview.meta_info["questions_asked"] += 1
     
     db.commit()
     
