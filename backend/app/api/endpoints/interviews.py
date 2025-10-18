@@ -94,12 +94,10 @@ def process_interview_message(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Process user message during interview
-    """
+
     interview_service: InterviewService = request.app.state.interview_service
     
-    # Get interview
+ 
     interview = db.query(Interview).filter(
         Interview.id == interview_id,
         Interview.user_id == user.id,
@@ -109,14 +107,12 @@ def process_interview_message(
     if not interview:
         raise HTTPException(status_code=404, detail="Active interview not found")
     
-    # Add user message to transcript
     interview.transcript.append({
         "timestamp": datetime.now().isoformat(),
         "speaker": "User",
         "message": message_data.message
     })
-    
-    # Build resume_data with all necessary fields for AI processing
+  
     resume_data = {
         "level": interview.meta_info["candidate_level"],
         "is_non_traditional": interview.meta_info.get("is_non_traditional", False),
