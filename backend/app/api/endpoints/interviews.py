@@ -187,7 +187,7 @@ def execute_code_feedback(
     """
     interview_service: InterviewService = request.app.state.interview_service
     
-    # Get interview
+    
     interview = db.query(Interview).filter(
         Interview.id == interview_id,
         Interview.user_id == user.id,
