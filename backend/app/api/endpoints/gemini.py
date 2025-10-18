@@ -925,7 +925,6 @@ Don't use the same phrases every time."""
         return prompt
     
     def _call_gemini(self, system_prompt: str, user_prompt: str, transcript: List[Dict] = None) -> str:
-        
         try:
             # build convo history from transcript
             history_text = ""

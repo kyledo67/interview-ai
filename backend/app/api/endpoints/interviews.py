@@ -90,6 +90,7 @@ def process_interview_message(
     interview_id: int,
     message_data: InterviewMessageRequest,
     request: Request,
+    transcript: list[dict] = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
