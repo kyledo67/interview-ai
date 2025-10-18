@@ -122,17 +122,17 @@ def process_interview_message(
         "background_context": interview.meta_info.get("background_context", "")
     }
     
-    # Calculate behavioral duration
+    # calc behavioral duration
     behavioral_start = datetime.fromisoformat(interview.meta_info["behavioral_start_time"])
     behavioral_duration = (datetime.now() - behavioral_start).total_seconds() / 60
     
-    # Calculate technical duration
+    # calc technical duration
     technical_duration = 0
     if interview.meta_info.get("technical_start_time"):
         technical_start = datetime.fromisoformat(interview.meta_info["technical_start_time"])
         technical_duration = (datetime.now() - technical_start).total_seconds() / 60
     
-    # Process message with AI
+   
     result = interview_service.process_message(
         user_message=message_data.message,
         resume_data=resume_data,
@@ -142,10 +142,11 @@ def process_interview_message(
         current_code=message_data.current_code or "",
         mode=interview.meta_info["mode"],
         technical_problem_solved=interview.meta_info.get("technical_problem_solved", False),
-        asked_candidate_questions=interview.meta_info.get("asked_candidate_questions", False)
+        asked_candidate_questions=interview.meta_info.get("asked_candidate_questions", False),
+        transcript=interview.transcript,
     )
     
-    # Add AI response to transcript
+    
     interview.transcript.append({
         "timestamp": datetime.now().isoformat(),
         "speaker": "AI",
