@@ -433,34 +433,35 @@ Be encouraging and educational. VARY your feedback style - don't use the same ph
             "problem_solved": problem_solved
         }
     
-    def _should_switch_to_technical(
-        self, 
-        questions_asked: int, 
-        duration_minutes: float
-    ) -> bool:
-        if questions_asked >= 5:
+    def _should_switch_to_technical(self, questions_asked: int, duration_minutes: float) -> bool:
+    
+        if questions_asked >= 6:
+            print(f"switch? {questions_asked} questions asked")
             return True
         
+        if duration_minutes >= 12:
+            print(f"switch? {duration_minutes:.1f} minutes elapsed")
+            return True
+        
+        # After 4 questions, high chance to switch
         if questions_asked >= 4:
-            if duration_minutes >= 8:  
-                return True
-            else:
-                return random.random() < 0.6 
+            should_switch = random.random() < 0.8  # 80% chance
+            print(f"After 4 questions ({questions_asked}), switch decision: {should_switch}")
+            return should_switch
         
+        # After 3 questions and 6+ minutes, decent chance
+        if questions_asked >= 3 and duration_minutes >= 6:
+            should_switch = random.random() < 0.6  # 60% chance
+            print(f"After 3 questions and {duration_minutes:.1f} min, switch decision: {should_switch}")
+            return should_switch
+        
+        # After 3 questions, small chance
         if questions_asked >= 3:
-            if duration_minutes >= 10:  
-                return True
-            elif duration_minutes >= 6:  
-                return random.random() < 0.4 
-            else:
-               
-                return random.random() < 0.1
+            should_switch = random.random() < 0.3  # 30% chance
+            print(f"After 3 questions, switch decision: {should_switch}")
+            return should_switch
         
-        # Very small chance to switch after 2 questions if a lot of time has passed
-        if questions_asked >= 2 and duration_minutes >= 15:
-            return random.random() < 0.3
-        
-       
+        print(f"asked {questions_asked} questions, {duration_minutes:.1f} min")
         return False
     
     def _should_end_technical_phase(
@@ -840,9 +841,6 @@ BE HONEST. Most candidates should be "No Hire" or "Hire" range (4-8). Strong Hir
             }
     
     def _get_behavioral_system_prompt(self, resume_data: Dict, questions_asked: int) -> str:
-        """
-        Generate system prompt for behavioral phase with better variety and non-traditional adaptiveness
-        """
         level = resume_data["level"]
         is_non_traditional = resume_data.get("is_non_traditional", False)
         background_context = resume_data.get("background_context", "")
@@ -871,7 +869,7 @@ SPECIAL INSTRUCTIONS FOR NON-TRADITIONAL CANDIDATES:
   * Be encouraging about their career transition
 """
         
-        # Add realism rules for ALL candidates
+
         realism_rules = """
 🚨 CRITICAL: BE REALISTIC ABOUT OFF-TOPIC/POOR ANSWERS 🚨
 
@@ -909,7 +907,7 @@ DO NOT:
 
 A real interviewer would be professional but would NOT ignore red flags. Address issues directly but professionally."""
         
-        # Determine question focus
+  
         question_focus = ""
         if questions_asked == 1:
             if is_non_traditional:
@@ -933,68 +931,120 @@ Keep it open-ended and natural."""
         elif questions_asked == 2:
             if is_non_traditional:
                 question_focus = """SECOND QUESTION - Ask about their technical journey:
-Focus on HOW they learned to code and what they've built:
-- "Tell me about your first technical project - what was it and how did you approach it?"
-- "Walk me through one of your projects. What did you build and why?"
-- "What's been the most challenging technical problem you've tackled so far?"
-- "Describe a project where you learned something completely new"
+        Focus on HOW they learned to code and what they've built:
+        - "Tell me about your first technical project - what was it and how did you approach it?"
+        - "Walk me through one of your projects. What did you build and why?"
+        - "What's been the most challenging technical problem you've tackled so far?"
+        - "Describe a project where you learned something completely new"
 
-Be realistic - they likely don't have SWE internships. Focus on bootcamp projects, self-taught work, or coursework."""
+        Be realistic - they likely don't have SWE internships. Focus on bootcamp projects, self-taught work, or coursework."""
             else:
                 question_focus = """SECOND QUESTION - PRIORITIZE WORK EXPERIENCE:
-If they have SWE internships/jobs, ask about those FIRST:
-- "Tell me about your experience at [Company]. What was your biggest contribution?"
-- "Walk me through a challenge you faced at [Company]"
-- "What was the most impactful project you worked on at [Company]?"
 
-If NO work experience, ask about their best project.
-VARY your phrasing."""
-        
+        CRITICAL: Look at the resume PDF attached. Check for MULTIPLE internships/companies.
+
+        If they have MULTIPLE internships/jobs:
+        - Ask about the DIFFERENT one from what they just discussed
+        - "I see you also worked at [DIFFERENT COMPANY] - tell me about that experience"
+        - "Let's talk about your time at [OTHER COMPANY] - what did you work on there?"
+
+        If they have ONE internship but MULTIPLE projects:
+        - Switch to a PROJECT: "Tell me about [PROJECT NAME] - what inspired you to build that?"
+
+        If NO work experience:
+        - Ask about their BEST/MOST COMPLEX project
+
+        DO NOT ask about the same company/project twice
+        DO reference DIFFERENT items from their resume"""
+
         elif questions_asked == 3:
             if is_non_traditional:
                 question_focus = """THIRD QUESTION - Transferable skills (teamwork/collaboration):
-Frame around ANY team experience (doesn't have to be SWE):
-- "Tell me about a time you worked with a team on a project - technical or not"
-- "Describe a situation where you had to collaborate with others who had different skills"
-- "Give me an example of working through a disagreement with a teammate"
-- "Tell me about your experience working in team settings"
+        Frame around ANY team experience (doesn't have to be SWE):
+        - "Tell me about a time you worked with a team on a project - technical or not"
+        - "Describe a situation where you had to collaborate with others who had different skills"
+        - "Give me an example of working through a disagreement with a teammate"
+        - "Tell me about your experience working in team settings"
 
-Accept non-SWE examples but encourage them to tie it to technical work if possible."""
+        Accept non-SWE examples but encourage them to tie it to technical work if possible."""
             else:
-                question_focus = """THIRD QUESTION - Teamwork/collaboration:
-- "Tell me about a time you disagreed with a teammate"
-- "Describe working with a difficult team member"
-- "Give an example of compromising on a technical decision"
-- "Walk me through a challenging group project"
+                question_focus = """THIRD QUESTION - Teamwork/collaboration OR different project/company:
 
-VARY your phrasing and transitions."""
-        
+        CRITICAL: You MUST ask about something NEW. Check the resume PDF.
+
+        Option A - If they haven't covered all their experiences yet:
+        - "I also noticed [DIFFERENT PROJECT/COMPANY on resume] - tell me about that"
+        - "Let's switch gears - what about [OTHER EXPERIENCE]?"
+
+        Option B - If you've covered their main experiences, ask BEHAVIORAL:
+        - "Tell me about a time you disagreed with a teammate on a technical decision"
+        - "Describe working with a difficult team member"
+        - "Give an example of compromising on an approach"
+        - "Walk me through resolving a conflict in a group project"
+
+        NEVER ask about the same internship/project/company again
+        ALWAYS move to NEW topics"""
+
         elif questions_asked == 4:
-            question_focus = """FOURTH QUESTION - Problem-solving:
-Examples (VARY your phrasing):
-- "Tell me about a technical challenge you didn't know how to solve initially"
-- "Describe debugging a difficult issue"
-- "Example of learning something new under pressure"
-- "Walk me through a time you were stuck on a problem - how did you get unstuck?"
-- "Tell me about the hardest bug you've encountered"
+            question_focus = """FOURTH QUESTION - Problem-solving OR remaining resume items:
 
-For non-traditional: Accept any technical problem-solving, even if from learning/bootcamp context."""
-        
+        CHECK RESUME FIRST: Are there projects/experiences you haven't asked about yet?
+
+        If YES - Ask about those:
+        - "I see you also have [UNMENTIONED PROJECT] - tell me about that"
+        - "Let's talk about [OTHER EXPERIENCE] on your resume"
+
+        If NO - Ask problem-solving behavioral:
+        - "Tell me about a technical challenge you didn't know how to solve initially"
+        - "Describe debugging a really difficult issue"
+        - "Example of learning something new under pressure"
+        - "Walk me through a time you were completely stuck - how did you figure it out?"
+        - "Tell me about the hardest bug you've encountered"
+
+        For non-traditional: Accept any technical problem-solving, even from learning context.
+
+        CRITICAL: Do NOT repeat topics. Every question should cover something NEW."""
+
         elif questions_asked >= 5:
-            question_focus = """FIFTH+ QUESTION - Leadership/impact/growth:
-Examples (VARY your phrasing):
-- "Tell me about a time you took initiative on a project"
-- "What's the most important technical decision you've made?"
-- "Describe your biggest achievement in software engineering"
-- "Tell me about something you built that you're really proud of"
-- "Walk me through a time you had to teach yourself something completely new"
+            question_focus = """FIFTH+ QUESTION - Leadership/impact/growth OR final resume coverage:
 
-Vary topics - don't repeat previous themes. Be creative with your questions."""
+        LAST CHANCE: Check resume for anything NOT discussed yet.
+
+        If uncovered items exist:
+        - "Before we move on, tell me about [FINAL ITEM]"
+        - "I want to hear about [LAST PROJECT/EXPERIENCE]"
+
+        If everything covered, ask about:
+        - "Tell me about a time you took initiative on a project"
+        - "What's the most important technical decision you've made?"
+        - "Describe your biggest achievement in software engineering so far"
+        - "Tell me about something you built that you're really proud of"
+        - "Walk me through learning a completely new technology on your own"
+
+        VARY TOPICS. Each question should feel different from the last. Be creative."""
         
         prompt = f"""You are an experienced technical interviewer for a Software Engineering Internship position.
 
 INTERVIEW PHASE: BEHAVIORAL (Question {questions_asked}/5)
 CANDIDATE LEVEL: {level.upper()}
+
+CRITICAL RULE - TOPIC VARIETY
+You MUST ask about DIFFERENT things from the candidate's resume. 
+
+RESUME PDF IS ATTACHED - YOU CAN SEE IT!
+- If Question 1 was about Internship A, then Question 2 should be about Project B or Internship C
+- If Question 2 was about Project X, then Question 3 should be about Project Y or behavioral teamwork
+- NEVER ask "tell me more about [same thing]" twice in a row
+- SCAN THE RESUME for multiple experiences/projects and ROTATE through them
+
+Track what you've asked about:
+Question 1: Usually intro/background
+Question 2: Different internship or main project  
+Question 3: Another project OR teamwork behavioral
+Question 4: Problem-solving OR remaining experience
+Question 5: Leadership OR final coverage
+
+SHOW VARIETY. Every question = NEW topic from resume.
 
 {non_traditional_note}
 
@@ -1039,9 +1089,6 @@ Check resume PDF for multiple internships/projects. Reference different ones."""
         return prompt
     
     def _get_technical_system_prompt(self, level: str) -> str:
-        """
-        Generate system prompt for technical phase with more realism
-        """
         prompt = f"""You are an experienced technical interviewer for a Software Engineering Internship position.
 
 INTERVIEW PHASE: TECHNICAL (MAX 45 MIN)
