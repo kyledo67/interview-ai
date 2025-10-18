@@ -139,10 +139,11 @@ def process_interview_message(
         current_code=message_data.current_code or "",
         mode=interview.meta_info["mode"],
         technical_problem_solved=interview.meta_info.get("technical_problem_solved", False),
-        asked_candidate_questions=interview.meta_info.get("asked_candidate_questions", False)
+        asked_candidate_questions=interview.meta_info.get("asked_candidate_questions", False),
+        transcript=interview.transcript,
     )
     
-    # Add AI response to transcript
+    
     interview.transcript.append({
         "timestamp": datetime.now().isoformat(),
         "speaker": "AI",

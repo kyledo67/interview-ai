@@ -1124,12 +1124,19 @@ DO NOT use a phrase you have already used."""
         
         return prompt
     
-    def _call_gemini(self, system_prompt: str, user_prompt: str) -> str:
-        """
-        Call Gemini API with resume context
-        """
+    def _call_gemini(self, system_prompt: str, user_prompt: str, transcript: List[Dict] = None) -> str:
+        
         try:
-            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+            # build convo history from transcript
+            history_text = ""
+            if transcript and len(transcript) > 0:
+                history_text = "\n\nCONVERSATION HISTORY:\n"
+                for msg in transcript:
+                    history_text += f"{msg['speaker']}: {msg['message']}\n"
+                history_text += "\n"
+            
+            full_prompt = f"{system_prompt}\n\n{history_text}{user_prompt}"
+            
             
         
             if self.uploaded_resume_file:
