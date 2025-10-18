@@ -140,7 +140,8 @@ Make it conversational and natural. Do NOT explain the interview format or menti
         current_code: str = "",
         mode: str = "behavioral",
         technical_problem_solved: bool = False,
-        asked_candidate_questions: bool = False
+        asked_candidate_questions: bool = False,
+        transcript: list[dict] = None,
     ) -> Dict:
         """
         IMPROVED: Better handling of all phases
@@ -168,7 +169,7 @@ Respond with:
 Keep it SHORT (2 sentences max) and natural. DO NOT explain the problem - the system will display it.
 DO NOT ask another behavioral question."""
                 
-                transition_message = self._call_gemini(system_prompt, transition_prompt)
+                transition_message = self._call_gemini(system_prompt, transition_prompt, transcript)
                 technical_data = self._generate_technical_question(resume_data["level"])
                 
                 return {
@@ -215,7 +216,7 @@ Examples of good transitions to next question (if their answer was complete):
 
 Keep your response conversational and natural. Max 3-4 sentences total. VARY YOUR LANGUAGE."""
                 
-                ai_response = self._call_gemini(system_prompt, prompt)
+                ai_response = self._call_gemini(system_prompt, prompt, transcript)
                 
                 return {
                     "ai_response": ai_response,
@@ -247,7 +248,7 @@ The technical portion is complete. Briefly acknowledge their work (1-2 sentences
 
 Be warm and encouraging about their performance. VARY your phrasing - don't sound robotic."""
                 
-                ai_response = self._call_gemini(system_prompt, prompt)
+                ai_response = self._call_gemini(system_prompt, prompt, transcript)
                 
                 return {
                     "ai_response": ai_response,
@@ -277,7 +278,7 @@ Respond naturally. Guide them through the problem:
 
 Be conversational and supportive. VARY your responses - use different phrasings and transitions."""
                 
-                ai_response = self._call_gemini(system_prompt, prompt)
+                ai_response = self._call_gemini(system_prompt, prompt, transcript)
                 
                 return {
                     "ai_response": ai_response,
@@ -304,7 +305,7 @@ Then say goodbye warmly and thank them for their time. VARY your goodbye phrasin
 
 Keep it brief and professional."""
             
-            ai_response = self._call_gemini(system_prompt, user_message)
+            ai_response = self._call_gemini(system_prompt, user_message, transcript)
             
             return {
                 "ai_response": ai_response,
@@ -328,15 +329,14 @@ Keep it brief and professional."""
         output: str, 
         status: str,
         candidate_level: str,
-        technical_duration_minutes: float
+        technical_duration_minutes: float,
+        transcript: List[Dict] = None,
     ) -> Dict:
-        """
-        Generate feedback on code execution
-        """
+        
         system_prompt = self._get_technical_system_prompt(candidate_level)
         prompt = f"""The candidate just ran their code (Time: {technical_duration_minutes:.1f}/45 minutes):
 
-CODE:
+`CODE:
 ```python
 {code}
 ```
@@ -356,7 +356,7 @@ Determine if this appears to be a working solution and set problem_solved accord
 
 Be encouraging and educational. VARY your feedback style - don't use the same phrases every time."""
         
-        feedback = self._call_gemini(system_prompt, prompt)
+        feedback = self._call_gemini(system_prompt, prompt, transcript)
         
         # Determine if problem is solved based on status and output
         problem_solved = (
@@ -393,7 +393,7 @@ Be encouraging and educational. VARY your feedback style - don't use the same ph
                
                 return random.random() < 0.1
         
-        # Very small chance to switch after 2 questions if a lot of time has passed
+       
         if questions_asked >= 2 and duration_minutes >= 15:
             return random.random() < 0.3
         
@@ -715,7 +715,7 @@ Be fair. Most candidates score 5-7."""
         
         system_prompt = "You are an expert technical interviewer. Respond ONLY with valid JSON."
         
-        response = self._call_gemini(system_prompt, evaluation_prompt)
+        response = self._call_gemini(system_prompt, evaluation_prompt, transcript)
         
         try:
             json_match = re.search(r'\{.*\}', response, re.DOTALL)

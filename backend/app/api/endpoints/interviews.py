@@ -90,7 +90,6 @@ def process_interview_message(
     interview_id: int,
     message_data: InterviewMessageRequest,
     request: Request,
-    transcript: list[dict] = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -198,22 +197,21 @@ def execute_code_feedback(
     if not interview:
         raise HTTPException(status_code=404, detail="Active interview not found")
     
-    # Calculate technical duration
     technical_duration = 0
     if interview.meta_info.get("technical_start_time"):
         technical_start = datetime.fromisoformat(interview.meta_info["technical_start_time"])
         technical_duration = (datetime.now() - technical_start).total_seconds() / 60
     
-    # Get AI feedback on code execution
     result = interview_service.process_code_execution(
         code=execution_data.code,
         output=execution_data.output,
         status=execution_data.status,
         candidate_level=interview.meta_info["candidate_level"],
-        technical_duration_minutes=technical_duration
+        technical_duration_minutes=technical_duration,
+        transcript = interview.transcript,
     )
     
-    # Add execution to transcript
+   
     interview.transcript.append({
         "timestamp": datetime.now().isoformat(),
         "speaker": "System",
@@ -226,7 +224,6 @@ def execute_code_feedback(
         "message": result["feedback"]
     })
     
-    # Update problem solved status
     if result.get("problem_solved"):
         interview.meta_info["technical_problem_solved"] = True
     
