@@ -35,7 +35,7 @@ function Resumeupload() {
         console.log("user:", user?.email);
 
         try {
-            const response = await fetch("http://localhost:8001/resumeupload", {
+            const response = await fetch("/resumeupload", {
                 method: "POST",
                 body: formdata,
                 credentials: "include"

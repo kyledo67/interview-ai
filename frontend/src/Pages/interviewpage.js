@@ -46,7 +46,6 @@ const InterviewPage = () => {
   const [interviewId, setInterviewId] = useState(null);
   const [transcript, setTranscript] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
-  
   const [isAIThinking, setIsAIThinking] = useState(false);
   const [candidateLevel, setCandidateLevel] = useState('');
   const [currentAIMessage, setCurrentAIMessage] = useState('');
@@ -55,11 +54,14 @@ const InterviewPage = () => {
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const speechRecognitionRef = useRef(null);
-  const isMicOnRef = useRef(isMicOn); 
+  const isMicOnRef = useRef(isMicOn);
+  const isAISpeakingRef = useRef(isAISpeaking);
   const streamRef = useRef(null);
   const speechSynthesisRef = useRef(null);
   const lastTranscriptLengthRef = useRef(0);
-
+  const isInterviewStartingRef = useRef(false);
+  const speechDebounceTimerRef = useRef(null);
+  const pendingSpeechRef = useRef('');
   const languages = [
     { id: 71, name: "Python", monaco: "python" }, 
     { id: 62, name: "Java", monaco: "java" },
@@ -74,7 +76,7 @@ const InterviewPage = () => {
   }, []); 
 
   useEffect(() => {
-    return () => {
+  return () => {
       if (speechRecognitionRef.current) {
         speechRecognitionRef.current.stop();
       }
@@ -83,6 +85,9 @@ const InterviewPage = () => {
       }
       if (speechSynthesisRef.current) {
         window.speechSynthesis.cancel();
+      }
+      if (speechDebounceTimerRef.current) {
+        clearTimeout(speechDebounceTimerRef.current);
       }
     };
   }, []);
@@ -119,6 +124,10 @@ int main() {
   }, [isMicOn]);
 
   useEffect(() => {
+    isAISpeakingRef.current = isAISpeaking;
+  }, [isAISpeaking]);
+
+  useEffect(() => {
     if (streamRef.current && userVideoRef.current) {
       userVideoRef.current.srcObject = streamRef.current;
     }
@@ -130,7 +139,7 @@ int main() {
         const newMessages = transcript.slice(lastTranscriptLengthRef.current);
         const lastMessage = newMessages[newMessages.length - 1];
         
-        if (lastMessage && lastMessage.speaker === 'User') {
+        if (lastMessage && lastMessage.speaker === 'User' && !isAISpeaking) {
           await sendMessageToAI(lastMessage.message);
         }
         
@@ -139,7 +148,7 @@ int main() {
     };
     
     handleNewUserMessage();
-  }, [transcript]);
+  }, [transcript, isAISpeaking]);
 
   const initializeWebcam = async () => {
     try {
@@ -187,7 +196,7 @@ int main() {
     const dataArray = new Uint8Array(bufferLength);
     
     const checkAudioLevel = () => {
-      if (isMicOnRef.current && analyserRef.current) {
+      if (isMicOnRef.current && analyserRef.current && !isAISpeakingRef.current) {
         analyserRef.current.getByteFrequencyData(dataArray);
         
         let sum = 0;
@@ -216,7 +225,7 @@ int main() {
       
       const recognition = speechRecognitionRef.current;
       recognition.continuous = true;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
       recognition.maxAlternatives = 1;
       
@@ -226,13 +235,41 @@ int main() {
       };
       
       recognition.onresult = (event) => {
+        if (isAISpeakingRef.current) {
+          console.log('AI is speaking, ignoring speech input');
+          return;
+        }
+        
+        // Clear existing debounce timer
+        if (speechDebounceTimerRef.current) {
+          clearTimeout(speechDebounceTimerRef.current);
+        }
+        
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
         for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            const transcriptText = event.results[i][0].transcript.trim();
-            if (transcriptText) {
-              addToTranscript('User', transcriptText);
-            }
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
           }
+        }
+        
+        // Store the current transcript (final + interim)
+        const currentText = (finalTranscript + interimTranscript).trim();
+        
+        if (currentText) {
+          pendingSpeechRef.current = currentText;
+          
+          // Wait 2 seconds of silence before sending to transcript
+          speechDebounceTimerRef.current = setTimeout(() => {
+            if (pendingSpeechRef.current && !isAISpeakingRef.current) {
+              addToTranscript('User', pendingSpeechRef.current);
+              pendingSpeechRef.current = '';
+            }
+          }, 1500); 
         }
       };
       
@@ -253,7 +290,14 @@ int main() {
       
       recognition.onend = () => {
         console.log('Speech ended');
-        
+        if (pendingSpeechRef.current && !isAISpeakingRef.current) {
+          if (speechDebounceTimerRef.current) {
+            clearTimeout(speechDebounceTimerRef.current);
+          }
+          addToTranscript('User', pendingSpeechRef.current);
+          pendingSpeechRef.current = '';
+        }
+ 
         if (isMicOnRef.current) {
           console.log('restarting');
           setTimeout(() => {
@@ -280,7 +324,7 @@ int main() {
         }
       };
       
-      if (isMicOn) {
+      if (isMicOnRef.current) {
         try {
           recognition.start();
           setIsRecording(true);
@@ -297,8 +341,15 @@ int main() {
   const toggleMicrophone = () => {
     const newMicState = !isMicOn;
     setIsMicOn(newMicState);
-    
+    isMicOnRef.current = newMicState;
+
+    if (speechDebounceTimerRef.current) {
+      clearTimeout(speechDebounceTimerRef.current);
+    }
+    pendingSpeechRef.current = '';
+
     if (newMicState) {
+      
       if (speechRecognitionRef.current) {
         try {
           speechRecognitionRef.current.abort();
@@ -311,13 +362,15 @@ int main() {
       setIsRecording(false);
       
       setTimeout(() => {
-        if (isMicOn) {
+        
+        if (newMicState) {
           console.log('new instance');
           initializeSpeechRecognition();
         }
       }, 300);
       
     } else {
+      
       if (speechRecognitionRef.current) {
         try {
           speechRecognitionRef.current.abort();
@@ -349,7 +402,7 @@ int main() {
     setIsAIThinking(true);
     
     try {
-      const response = await fetch(`http://localhost:8001/interviews/${interviewId}/message`, {
+      const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -407,7 +460,7 @@ int main() {
     setIsAISpeaking(true);
     
     try {
-      const response = await fetch('http://localhost:8001/tts', {
+      const response = await fetch('https://interview-ai-crdv.onrender.com/tts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -450,8 +503,15 @@ int main() {
   };
 
   const startInterview = async () => {
+    if (isInterviewStartingRef.current) {
+      console.log('Interview already starting, skipping duplicate call');
+      return;
+    }
+    
+    isInterviewStartingRef.current = true;
+    
     try {
-      const response = await fetch('http://localhost:8001/interviews/start', {
+      const response = await fetch('https://interview-ai-crdv.onrender.com/interviews/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -465,7 +525,6 @@ int main() {
         setInterviewId(result.interview_id);
         setCandidateLevel(result.candidate_level);
         
-        addToTranscript('AI', result.ai_message);
         setCurrentAIMessage(result.ai_message);
         
         speakText(result.ai_message);
@@ -479,10 +538,12 @@ int main() {
         if (response.status === 401) {
           console.error('unauthorized');
           window.location.href = '/';
-        } 
+        }
+        isInterviewStartingRef.current = false;
       }
     } catch (error) {
       console.error('Error starting interview:', error);
+      isInterviewStartingRef.current = false;
     }
   };
 
@@ -493,7 +554,7 @@ int main() {
     }
     
     try {
-      const response = await fetch(`http://localhost:8001/interviews/${interviewId}/end`, {
+      const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -594,7 +655,7 @@ int main() {
     setIsExecuting(true);
     
     try {
-      const response = await fetch('http://localhost:8001/code/execute', {
+      const response = await fetch('https://interview-ai-crdv.onrender.com/code/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -641,7 +702,7 @@ int main() {
     if (!interviewId) return;
     
     try {
-      const response = await fetch(`http://localhost:8001/interviews/${interviewId}/execute-code`, {
+      const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/execute-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -678,13 +739,17 @@ int main() {
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
+    if (speechDebounceTimerRef.current) {
+      clearTimeout(speechDebounceTimerRef.current);
+    }
+    pendingSpeechRef.current = '';
     
     await endInterviewWithBackend();
     
     console.log('Interview ended');
     setShowEndCallDialog(false);
     
-    window.location.href = '/';
+    navigate('/results', { replace: true});
   };
 
   const cancelEndCall = () => {
@@ -716,6 +781,44 @@ int main() {
             className={`control-button ${isCameraOn ? 'camera-on' : 'camera-off'}`}
           >
             {isCameraOn ? <Camera size={20} /> : <CameraOff size={20} />}
+          </button>
+
+          <button
+            onClick={async () => {
+              if (currentPhase === 'technical') return;
+              
+              try {
+                const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/get-technical-problem`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    candidate_level: candidateLevel
+                  })
+                });
+                
+                if (response.ok) {
+                  const data = await response.json();
+                  transitionToTechnical(data.technical_data);
+                } else {
+                  console.error('Failed to fetch technical problem');
+                }
+              } catch (error) {
+                console.error('Error fetching technical problem:', error);
+              }
+            }}
+            className="control-button"
+            style={{ 
+              background: currentPhase === 'technical' ? '#4CAF50' : '#2196F3',
+              marginRight: '10px'
+            }}
+            disabled={currentPhase === 'technical'}
+          >
+            <span style={{ fontSize: '12px' }}>
+              {currentPhase === 'technical' ? '✓ Technical' : 'Switch to Technical'}
+            </span>
           </button>
 
           <button 
@@ -760,7 +863,7 @@ int main() {
                   <span>Interviewer</span>
                 </div>
                 
-                {isAIThinking && (
+                {(isAIThinking || isAISpeaking) && (
                   <div style={{ 
                     position: 'absolute', 
                     top: '10px', 
@@ -771,28 +874,11 @@ int main() {
                     fontSize: '12px',
                     color: 'white'
                   }}>
-                    Thinking...
+                    {isAIThinking ? 'Thinking...' : 'Speaking...'}
                   </div>
                 )}
               </div>
             </div>
-
-            {currentAIMessage && (
-              <div style={{
-                position: 'absolute',
-                bottom: '20px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'rgba(0,0,0,0.8)',
-                color: 'white',
-                padding: '15px 25px',
-                borderRadius: '10px',
-                maxWidth: '80%',
-                textAlign: 'center'
-              }}>
-                {currentAIMessage}
-              </div>
-            )}
           </div>
         )}
 
