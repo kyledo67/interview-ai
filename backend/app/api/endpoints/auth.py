@@ -40,7 +40,7 @@ def login(user_credentials: UserLogin, response: Response, db: Session = Depends
         key="access_token",
         value=token,
         httponly=True,
-        secure=False, 
+        secure=True, 
         samesite="lax",
         max_age=1800   
     )
@@ -49,12 +49,12 @@ def login(user_credentials: UserLogin, response: Response, db: Session = Depends
         key="refresh_token",
         value=refresh_token.token,
         httponly=True,
-        secure=False,
+        secure=True,
         samesite="lax",
         max_age=int((refresh_token.expire_at-datetime.utcnow()).total_seconds())
     )
-    #retuning refrshtoken for dev only
-    return {"message": "Login successful", "refresh token": refresh_token}
+   
+    return {"message": "Login successful"}
 
 @router.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_user)):
@@ -71,31 +71,28 @@ def refresh(response: Response, request: Request, db: Session = Depends(get_db))
     if not token or token.expire_at < datetime.utcnow():
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
     
-    # Create new access token
     access_token_expire = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": str(token.user.id)}, 
         expires_delta=access_token_expire
     )
     
-    # Set new access token cookie
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,
-        samesite="lax",
+        secure=True, 
+        samesite="none",  
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     
-    # Extend refresh token cookie (optional - keeps user logged in longer)
     response.set_cookie(
         key="refresh_token",
         value=rtoken,
         httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=30 * 24 * 60 * 60  # 30 days
+        secure=True, 
+        samesite="none",  
+        max_age=30 * 24 * 60 * 60
     )
     
     return {"message": "cool beans"}

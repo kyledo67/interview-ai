@@ -1,9 +1,8 @@
 from fastapi import FastAPI # type: ignore
-from app.api.endpoints import auth
 from fastapi.middleware.cors import CORSMiddleware # type: ignore
 from app.database import engine, Base
 from app.models import user, token
-from app.api.endpoints import interviews, code, resume, tts
+from app.api.endpoints import interviews, code, resume, tts, auth
 from fastapi.staticfiles import StaticFiles # type: ignore
 from google import genai
 from dotenv import load_dotenv #type: ignore 
@@ -24,6 +23,7 @@ app.state.interview_service = InterviewService(client, model_name)
 origins = [
     "http://localhost:3000",
     "http://localhost:8001",
+    "https://interview-ai-crdv.onrender.com",
 ]
 
 app.add_middleware(
@@ -34,10 +34,10 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-app.include_router(auth.router)
+app.include_router(auth.router)  
 app.include_router(resume.router)
 app.include_router(interviews.router)
-app.include_router(code.router, prefix="/code", tags=["code"])
+app.include_router(code.router, tags=["code"])
 app.include_router(tts.router, tags=["tts"])
 
 app.mount("/", StaticFiles(directory="../frontend/build", html=True), name="static")
