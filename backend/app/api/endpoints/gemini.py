@@ -120,42 +120,12 @@ ASSESSMENT:
             raise Exception(f"Failed to analyze resume with Gemini: {str(e)}")
     
     def generate_initial_message(self, resume_data: Dict) -> str:
-        """Generate warm, casual initial greeting"""
-        
-        # Extract candidate name from resume if available
-        name = resume_data.get('name', '')
         level = resume_data["level"]
+        system_prompt = self._get_behavioral_system_prompt(resume_data, 1)
         
-        # Create a warm greeting prompt
-        system_prompt = f"""You are a friendly, professional technical interviewer starting a {'Software Engineering Internship' if level == 'intern' else 'New Grad Software Engineering'} interview.
-
-CRITICAL INSTRUCTIONS:
-- Start with a WARM, CASUAL greeting to make the candidate comfortable
-- Ask a light ice-breaker question like "How's your day going?" or "How are you doing today?"
-- Keep it SHORT and natural (1-2 sentences max)
-- DO NOT ask behavioral questions yet
-- DO NOT mention the interview format or structure
-- Sound genuinely friendly and welcoming, not robotic
-- If the User says something off topic, cut off sentences, or something that doesn't make sense, then ask them to repeat it or say something like "Sorry I didn't get that."
-
-Examples of good greetings:
-- "Hi [name], thanks for joining me today! How has your day been so far?"
-- "Hey [name], great to meet you! How are you doing today?"
-- "Hi [name], thanks for taking the time to chat with me. How's everything going?"
-- "[name], good to see you! How's your day treating you?"
-- "Constance and I just bagged a M&A deal in his Gstaad, anyways how was your day?"
-
-
-VARY your phrasing - don't use the exact same greeting every time."""
+        user_prompt = """Start the interview. Greet the candidate warmly and professionally, then ask your first behavioral question. 
         
-        user_prompt = f"""Generate ONLY the warm initial greeting for the candidate{f' named {name}' if name else ''}.
-
-Remember:
-- Warm and casual tone
-- Ask about their day/how they're doing
-- 1-2 sentences maximum
-- NO behavioral questions yet
-- Sound natural and friendly"""
+Make it conversational and natural. Do NOT explain the interview format or mention switching phases."""
         
         response = self._call_gemini(system_prompt, user_prompt)
         return response
@@ -170,15 +140,21 @@ Remember:
         current_code: str = "",
         mode: str = "behavioral",
         technical_problem_solved: bool = False,
-        asked_candidate_questions: bool = False
+        asked_candidate_questions: bool = False,
+        transcript: list[dict] = None,
     ) -> Dict:
+        """
+        IMPROVED: Better handling of all phases
+        """
         if mode == "behavioral":
+            # Check if should switch to technical
             should_switch = self._should_switch_to_technical(
                 questions_asked, 
                 behavioral_duration_minutes
             )
             
             if should_switch:
+                # Generate transition response
                 system_prompt = self._get_behavioral_system_prompt(resume_data, questions_asked)
                 transition_prompt = f"""The candidate just said: "{user_message}"
 
@@ -193,7 +169,7 @@ Respond with:
 Keep it SHORT (2 sentences max) and natural. DO NOT explain the problem - the system will display it.
 DO NOT ask another behavioral question."""
                 
-                transition_message = self._call_gemini(system_prompt, transition_prompt)
+                transition_message = self._call_gemini(system_prompt, transition_prompt, transcript)
                 technical_data = self._generate_technical_question(resume_data["level"])
                 
                 return {
@@ -207,77 +183,40 @@ DO NOT ask another behavioral question."""
                 # Continue behavioral phase
                 system_prompt = self._get_behavioral_system_prompt(resume_data, questions_asked)
                 
-             
-                if questions_asked == 0:
-                    # This is the response to the initial greeting
-                    prompt = f"""You just greeted the candidate with something like "How are you doing today?" or "How's your day going?"
+                # Improved prompt for continuing behavioral
+                prompt = f"""The candidate just answered: "{user_message}"
 
-            The candidate responded: "{user_message}"
+This was their response to behavioral question #{questions_asked}.
 
-            This is their response to your CASUAL GREETING, not a behavioral question yet.
+Analyze their answer:
+- If it's detailed and complete: Briefly acknowledge (1 sentence), then ask the NEXT behavioral question
+- If it's vague or incomplete: Ask ONE follow-up to get more detail (STAR method: Situation, Task, Action, Result)
+- If they mentioned something interesting: Probe deeper with ONE specific follow-up
 
-            CRITICAL ANALYSIS:
-            - If they said something POSITIVE/NEUTRAL like "good", "fine", "great", "okay", "alright", "not bad", etc.:
-            * That's NORMAL for a greeting response
-            * DO NOT ask them to elaborate
-            * Simply acknowledge warmly and transition to the FIRST behavioral question
-            
-            - If they said something NEGATIVE like "bad", "not good", "terrible", "rough", "stressful", "not great", etc.:
-            * Show empathy and acknowledge their feelings
-            * Offer brief understanding/encouragement
-            * Then gently transition to the interview
-            * Keep it professional but human
+CRITICAL REMINDERS:
+- Do NOT ask about the same project/experience again
+- Vary your question topics (if you asked teamwork, now ask problem-solving, etc.)
+- Reference DIFFERENT parts of their resume
+- If you asked about Project A, now ask about Project B or their internship
+- Ask ONE question only
+- SHOW VARIETY in your phrasing and transitions - don't sound robotic
 
-            EXAMPLES FOR POSITIVE/NEUTRAL RESPONSES:
-            - "Great to hear! I'm doing well too. So let's get started - tell me a bit about yourself and what interests you in software engineering."
-            - "Good good! Glad you're doing well. Alright, let's dive in - walk me through your background and how you got into programming."
-            - "Awesome! I'm having a good day as well. So, I'd love to start by hearing about your journey into software engineering."
-            - "Nice! Well let's jump right in then. Tell me about yourself - what drew you to software engineering?"
+Examples of good follow-ups if their answer was vague:
+- "Can you be more specific about what YOU did in that situation?"
+- "What was your exact contribution to solving that problem?"
+- "How did you make that technical decision?"
+- "What was the outcome - did it work?"
 
-            EXAMPLES FOR NEGATIVE RESPONSES:
-            - "Oh, I'm sorry to hear that. I appreciate you taking the time despite having a rough day. Hopefully this conversation will be a nice distraction. So, let's start - tell me a bit about yourself and your interest in software engineering."
-            - "That's tough, I understand. Well, let's try to make this as smooth as possible for you. Why don't we start with you telling me about your background in programming?"
-            - "I hear you - some days are like that. I appreciate you showing up anyway. Let's dive in - walk me through your journey into software engineering."
-            - "Sorry you're having a rough one. Well, hopefully we can keep this relaxed and conversational. So, tell me about yourself - what got you interested in software engineering?"
+Examples of good transitions to next question (if their answer was complete):
+- "That makes sense. Now, tell me about..." [NEW TOPIC]
+- "Good example. I'm also curious about..." [DIFFERENT EXPERIENCE]
+- "Great. Let me ask you about something else..." [DIFFERENT PROJECT/COMPANY]
+- "Interesting. Moving on..." [NEW TOPIC]
+- "I appreciate that perspective. Let's switch gears..." [DIFFERENT AREA]
 
-            Keep it natural, empathetic, and smooth. DO NOT dwell on their bad day - acknowledge briefly and move forward professionally.
-            VARY your phrasing - don't use the same transition every time."""
-                else:
-                    # ts is a response to an actual behavioral question
-                    prompt = f"""The candidate just answered: "{user_message}"
-
-            This was their response to behavioral question #{questions_asked}.
-
-            Analyze their answer:
-            - If it's detailed and complete: Briefly acknowledge (1 sentence), then ask the NEXT behavioral question
-            - If it's vague or incomplete: Ask ONE follow-up to get more detail (STAR method: Situation, Task, Action, Result)
-            - If they mentioned something interesting: Probe deeper with ONE specific follow-up
-            - If it's OFF-TOPIC, NONSENSICAL, or EVASIVE: Address it directly like a real interviewer would (see your system prompt for examples)
-
-            CRITICAL REMINDERS:
-            - Do NOT ask about the same project/experience again
-            - Vary your question topics (if you asked teamwork, now ask problem-solving, etc.)
-            - Reference DIFFERENT parts of their resume
-            - If you asked about Project A, now ask about Project B or their internship
-            - Ask ONE question only
-            - SHOW VARIETY in your phrasing and transitions - don't sound robotic
-
-            Examples of good follow-ups if their answer was vague:
-            - "Can you be more specific about what YOU did in that situation?"
-            - "What was your exact contribution to solving that problem?"
-            - "How did you make that technical decision?"
-            - "What was the outcome - did it work?"
-
-            Examples of good transitions to next question (if their answer was complete):
-            - "That makes sense. Now, tell me about..." [NEW TOPIC]
-            - "Good example. I'm also curious about..." [DIFFERENT EXPERIENCE]
-            - "Great. Let me ask you about something else..." [DIFFERENT PROJECT/COMPANY]
-            - "Interesting. Moving on..." [NEW TOPIC]
-            - "I appreciate that perspective. Let's switch gears..." [DIFFERENT AREA]
-
-            Keep your response conversational and natural. Max 2-3 sentences total. VARY YOUR LANGUAGE."""
+Keep your response conversational and natural. Max 3-4 sentences total. VARY YOUR LANGUAGE."""
                 
-                ai_response = self._call_gemini(system_prompt, prompt)
+                ai_response = self._call_gemini(system_prompt, prompt, transcript)
                 
                 return {
                     "ai_response": ai_response,
@@ -309,7 +248,7 @@ The technical portion is complete. Briefly acknowledge their work (1-2 sentences
 
 Be warm and encouraging about their performance. VARY your phrasing - don't sound robotic."""
                 
-                ai_response = self._call_gemini(system_prompt, prompt)
+                ai_response = self._call_gemini(system_prompt, prompt, transcript)
                 
                 return {
                     "ai_response": ai_response,
@@ -336,11 +275,10 @@ Respond naturally. Guide them through the problem:
 - Help with syntax/library usage if they forget
 - Provide feedback on their code
 - DO NOT solve it for them
-- If they're giving up or being evasive, address it realistically
 
 Be conversational and supportive. VARY your responses - use different phrasings and transitions."""
                 
-                ai_response = self._call_gemini(system_prompt, prompt)
+                ai_response = self._call_gemini(system_prompt, prompt, transcript)
                 
                 return {
                     "ai_response": ai_response,
@@ -367,7 +305,7 @@ Then say goodbye warmly and thank them for their time. VARY your goodbye phrasin
 
 Keep it brief and professional."""
             
-            ai_response = self._call_gemini(system_prompt, user_message)
+            ai_response = self._call_gemini(system_prompt, user_message, transcript)
             
             return {
                 "ai_response": ai_response,
@@ -391,15 +329,14 @@ Keep it brief and professional."""
         output: str, 
         status: str,
         candidate_level: str,
-        technical_duration_minutes: float
+        technical_duration_minutes: float,
+        transcript: List[Dict] = None,
     ) -> Dict:
-        """
-        Generate feedback on code execution
-        """
+        
         system_prompt = self._get_technical_system_prompt(candidate_level)
         prompt = f"""The candidate just ran their code (Time: {technical_duration_minutes:.1f}/45 minutes):
 
-CODE:
+`CODE:
 ```python
 {code}
 ```
@@ -419,7 +356,7 @@ Determine if this appears to be a working solution and set problem_solved accord
 
 Be encouraging and educational. VARY your feedback style - don't use the same phrases every time."""
         
-        feedback = self._call_gemini(system_prompt, prompt)
+        feedback = self._call_gemini(system_prompt, prompt, transcript)
         
         # Determine if problem is solved based on status and output
         problem_solved = (
@@ -433,35 +370,34 @@ Be encouraging and educational. VARY your feedback style - don't use the same ph
             "problem_solved": problem_solved
         }
     
-    def _should_switch_to_technical(self, questions_asked: int, duration_minutes: float) -> bool:
-    
-        if questions_asked >= 6:
-            print(f"switch? {questions_asked} questions asked")
+    def _should_switch_to_technical(
+        self, 
+        questions_asked: int, 
+        duration_minutes: float
+    ) -> bool:
+        if questions_asked >= 5:
             return True
         
-        if duration_minutes >= 12:
-            print(f"switch? {duration_minutes:.1f} minutes elapsed")
-            return True
-        
-        # After 4 questions, high chance to switch
         if questions_asked >= 4:
-            should_switch = random.random() < 0.8  # 80% chance
-            print(f"After 4 questions ({questions_asked}), switch decision: {should_switch}")
-            return should_switch
+            if duration_minutes >= 8:  
+                return True
+            else:
+                return random.random() < 0.6 
         
-        # After 3 questions and 6+ minutes, decent chance
-        if questions_asked >= 3 and duration_minutes >= 6:
-            should_switch = random.random() < 0.6  # 60% chance
-            print(f"After 3 questions and {duration_minutes:.1f} min, switch decision: {should_switch}")
-            return should_switch
-        
-        # After 3 questions, small chance
         if questions_asked >= 3:
-            should_switch = random.random() < 0.3  # 30% chance
-            print(f"After 3 questions, switch decision: {should_switch}")
-            return should_switch
+            if duration_minutes >= 10:  
+                return True
+            elif duration_minutes >= 6:  
+                return random.random() < 0.4 
+            else:
+               
+                return random.random() < 0.1
         
-        print(f"asked {questions_asked} questions, {duration_minutes:.1f} min")
+       
+        if questions_asked >= 2 and duration_minutes >= 15:
+            return random.random() < 0.3
+        
+       
         return False
     
     def _should_end_technical_phase(
@@ -743,7 +679,7 @@ Explanation: The endWord "cog" is not in wordList, therefore there is no valid t
         technical_duration_minutes: float
     ) -> Dict:
         """
-        Generate final interview evaluation with more realistic/harsh scoring
+        Generate final interview evaluation
         """
         transcript_text = "\n".join([
             f"{msg['speaker']}: {msg['message']}"
@@ -764,58 +700,22 @@ FINAL CODE:
 {final_code if final_code else "No code submitted"}
 ```
 
-SCORING GUIDELINES - BE REALISTIC AND RIGOROUS:
-
-BEHAVIORAL (0-10):
-- 8-10: Excellent STAR responses, specific details, shows strong self-awareness and communication
-- 6-7: Good responses with some details, mostly coherent but may lack depth
-- 4-5: Vague responses, lacks specifics, poor structure, some relevant content
-- 2-3: Very weak responses, mostly off-topic, poor communication
-- 0-1: Uncooperative, nonsensical, or completely off-topic answers
-
-TECHNICAL (0-10):
-- 9-10: Solved problem optimally with clean code, explained approach clearly, discussed complexity
-- 7-8: Solved problem with working solution, may not be optimal but demonstrates understanding
-- 5-6: Partial solution, logical approach but significant bugs or incomplete
-- 3-4: Struggled significantly, needed heavy hints, minimal working code
-- 0-2: Could not solve, no coherent approach, gave up or wrote no meaningful code
-
-OVERALL (0-10):
-- Weight: 40% behavioral + 60% technical
-- Be honest about red flags (evasiveness, lack of preparation, poor problem-solving)
-- Don't inflate scores - average candidates should score 4-6, not 7-8
-
-RED FLAGS TO PENALIZE HEAVILY:
-- Off-topic or nonsensical answers
-- Inability to explain their own code
-- Copy-paste mentality without understanding
-- Poor communication or unwillingness to engage
-- Gave up easily on technical problem
-- No questions about the role (shows lack of interest)
-
 Provide evaluation in JSON:
 {{
   "behavioral_score": <0-10>,
   "technical_score": <0-10>,
   "overall_score": <0-10>,
-  "strengths": [<2-4 specific items>],
-  "improvements": [<3-5 specific items with actionable advice>],
-  "detailed_feedback": "<2-3 paragraphs covering both behavioral and technical performance>",
-  "recommendation": "<Strong Hire | Hire | No Hire | Strong No Hire>",
-  "red_flags": [<list any concerning behaviors or responses>]
+  "strengths": [<3-4 items>],
+  "improvements": [<3-4 items>],
+  "detailed_feedback": "<2-3 paragraphs>",
+  "recommendation": "<Strong Hire | Hire | No Hire | Strong No Hire>"
 }}
 
-RECOMMENDATION GUIDELINES:
-- Strong Hire (9-10): Exceptional candidate, would hire immediately
-- Hire (7-8): Solid candidate, good fit for the role
-- No Hire (4-6): Not ready, significant gaps or concerns
-- Strong No Hire (0-3): Very weak performance or major red flags
-
-BE HONEST. Most candidates should be "No Hire" or "Hire" range (4-8). Strong Hire should be rare."""
+Be fair. Most candidates score 5-7."""
         
-        system_prompt = "You are a senior technical interviewer known for honest, rigorous evaluations. Do not inflate scores. Respond ONLY with valid JSON."
+        system_prompt = "You are an expert technical interviewer. Respond ONLY with valid JSON."
         
-        response = self._call_gemini(system_prompt, evaluation_prompt)
+        response = self._call_gemini(system_prompt, evaluation_prompt, transcript)
         
         try:
             json_match = re.search(r'\{.*\}', response, re.DOTALL)
@@ -824,23 +724,22 @@ BE HONEST. Most candidates should be "No Hire" or "Hire" range (4-8). Strong Hir
             else:
                 evaluation = json.loads(response)
             
-            # Ensure red_flags exists
-            evaluation.setdefault("red_flags", [])
-            
             return evaluation
         except json.JSONDecodeError:
             return {
-                "behavioral_score": 3,
-                "technical_score": 2,
-                "overall_score": 3,
-                "strengths": ["Attended interview"],
-                "improvements": ["Needs significant practice with behavioral questions", "Requires stronger technical foundation", "Work on communication skills"],
-                "detailed_feedback": "Evaluation unavailable due to processing error.",
-                "recommendation": "No Hire",
-                "red_flags": ["Evaluation processing failed"]
+                "behavioral_score": 5,
+                "technical_score": 5,
+                "overall_score": 5,
+                "strengths": ["Completed interview"],
+                "improvements": ["Continue practicing"],
+                "detailed_feedback": "Evaluation unavailable",
+                "recommendation": "No Hire"
             }
     
     def _get_behavioral_system_prompt(self, resume_data: Dict, questions_asked: int) -> str:
+        """
+        Generate system prompt for behavioral phase with better variety and non-traditional adaptiveness
+        """
         level = resume_data["level"]
         is_non_traditional = resume_data.get("is_non_traditional", False)
         background_context = resume_data.get("background_context", "")
@@ -869,45 +768,7 @@ SPECIAL INSTRUCTIONS FOR NON-TRADITIONAL CANDIDATES:
   * Be encouraging about their career transition
 """
         
-
-        realism_rules = """
-🚨 CRITICAL: BE REALISTIC ABOUT OFF-TOPIC/POOR ANSWERS 🚨
-
-If the candidate gives an answer that is:
-- Completely off-topic (e.g., "I like pizzas" when asked about technical experience)
-- Nonsensical or incoherent
-- Evasive or uncooperative (e.g., "what if I don't want to")
-- Shows they're not taking the interview seriously
-
-YOU MUST respond like a REAL interviewer would:
-- Show mild concern or confusion: "I'm not sure I understand how that relates to the question"
-- Gently redirect: "That's... interesting, but let's get back to the question. Can you tell me about [original question]?"
-- Be slightly firm if needed: "I need you to answer the question I asked. Let me rephrase..."
-- If they continue being uncooperative: "I'm sensing some hesitation here. Are you comfortable continuing with this interview?"
-
-EXAMPLES OF REALISTIC RESPONSES:
-User: "I like pizzas"
-You: "Okay... I'm not sure how that relates to your technical experience. Let me ask again - tell me about a challenging project you've worked on."
-
-User: "What if I don't want to?"
-You: "I understand interviews can be stressful, but I do need you to engage with the questions. Are you ready to continue, or would you prefer to reschedule?"
-
-User: *gibberish or off-topic rambling*
-You: "I'm having trouble following. Could you focus on answering the specific question about [topic]?"
-
-User: *very vague answer with no details*
-You: "I need you to be more specific. What exactly did YOU do in that situation? Walk me through your actions step by step."
-
-DO NOT:
-- Say "That's an interesting response" when it's clearly not relevant
-- Immediately pivot to the next question without addressing the issue
-- Be overly accommodating to nonsense answers
-- Pretend everything is fine when it's not
-- Let them deflect or avoid the question
-
-A real interviewer would be professional but would NOT ignore red flags. Address issues directly but professionally."""
-        
-  
+        # Determine question focus
         question_focus = ""
         if questions_asked == 1:
             if is_non_traditional:
@@ -931,124 +792,70 @@ Keep it open-ended and natural."""
         elif questions_asked == 2:
             if is_non_traditional:
                 question_focus = """SECOND QUESTION - Ask about their technical journey:
-        Focus on HOW they learned to code and what they've built:
-        - "Tell me about your first technical project - what was it and how did you approach it?"
-        - "Walk me through one of your projects. What did you build and why?"
-        - "What's been the most challenging technical problem you've tackled so far?"
-        - "Describe a project where you learned something completely new"
+Focus on HOW they learned to code and what they've built:
+- "Tell me about your first technical project - what was it and how did you approach it?"
+- "Walk me through one of your projects. What did you build and why?"
+- "What's been the most challenging technical problem you've tackled so far?"
+- "Describe a project where you learned something completely new"
 
-        Be realistic - they likely don't have SWE internships. Focus on bootcamp projects, self-taught work, or coursework."""
+Be realistic - they likely don't have SWE internships. Focus on bootcamp projects, self-taught work, or coursework."""
             else:
                 question_focus = """SECOND QUESTION - PRIORITIZE WORK EXPERIENCE:
+If they have SWE internships/jobs, ask about those FIRST:
+- "Tell me about your experience at [Company]. What was your biggest contribution?"
+- "Walk me through a challenge you faced at [Company]"
+- "What was the most impactful project you worked on at [Company]?"
 
-        CRITICAL: Look at the resume PDF attached. Check for MULTIPLE internships/companies.
-
-        If they have MULTIPLE internships/jobs:
-        - Ask about the DIFFERENT one from what they just discussed
-        - "I see you also worked at [DIFFERENT COMPANY] - tell me about that experience"
-        - "Let's talk about your time at [OTHER COMPANY] - what did you work on there?"
-
-        If they have ONE internship but MULTIPLE projects:
-        - Switch to a PROJECT: "Tell me about [PROJECT NAME] - what inspired you to build that?"
-
-        If NO work experience:
-        - Ask about their BEST/MOST COMPLEX project
-
-        DO NOT ask about the same company/project twice
-        DO reference DIFFERENT items from their resume"""
-
+If NO work experience, ask about their best project.
+VARY your phrasing."""
+        
         elif questions_asked == 3:
             if is_non_traditional:
                 question_focus = """THIRD QUESTION - Transferable skills (teamwork/collaboration):
-        Frame around ANY team experience (doesn't have to be SWE):
-        - "Tell me about a time you worked with a team on a project - technical or not"
-        - "Describe a situation where you had to collaborate with others who had different skills"
-        - "Give me an example of working through a disagreement with a teammate"
-        - "Tell me about your experience working in team settings"
+Frame around ANY team experience (doesn't have to be SWE):
+- "Tell me about a time you worked with a team on a project - technical or not"
+- "Describe a situation where you had to collaborate with others who had different skills"
+- "Give me an example of working through a disagreement with a teammate"
+- "Tell me about your experience working in team settings"
 
-        Accept non-SWE examples but encourage them to tie it to technical work if possible."""
+Accept non-SWE examples but encourage them to tie it to technical work if possible."""
             else:
-                question_focus = """THIRD QUESTION - Teamwork/collaboration OR different project/company:
+                question_focus = """THIRD QUESTION - Teamwork/collaboration:
+- "Tell me about a time you disagreed with a teammate"
+- "Describe working with a difficult team member"
+- "Give an example of compromising on a technical decision"
+- "Walk me through a challenging group project"
 
-        CRITICAL: You MUST ask about something NEW. Check the resume PDF.
-
-        Option A - If they haven't covered all their experiences yet:
-        - "I also noticed [DIFFERENT PROJECT/COMPANY on resume] - tell me about that"
-        - "Let's switch gears - what about [OTHER EXPERIENCE]?"
-
-        Option B - If you've covered their main experiences, ask BEHAVIORAL:
-        - "Tell me about a time you disagreed with a teammate on a technical decision"
-        - "Describe working with a difficult team member"
-        - "Give an example of compromising on an approach"
-        - "Walk me through resolving a conflict in a group project"
-
-        NEVER ask about the same internship/project/company again
-        ALWAYS move to NEW topics"""
-
+VARY your phrasing and transitions."""
+        
         elif questions_asked == 4:
-            question_focus = """FOURTH QUESTION - Problem-solving OR remaining resume items:
+            question_focus = """FOURTH QUESTION - Problem-solving:
+Examples (VARY your phrasing):
+- "Tell me about a technical challenge you didn't know how to solve initially"
+- "Describe debugging a difficult issue"
+- "Example of learning something new under pressure"
+- "Walk me through a time you were stuck on a problem - how did you get unstuck?"
+- "Tell me about the hardest bug you've encountered"
 
-        CHECK RESUME FIRST: Are there projects/experiences you haven't asked about yet?
-
-        If YES - Ask about those:
-        - "I see you also have [UNMENTIONED PROJECT] - tell me about that"
-        - "Let's talk about [OTHER EXPERIENCE] on your resume"
-
-        If NO - Ask problem-solving behavioral:
-        - "Tell me about a technical challenge you didn't know how to solve initially"
-        - "Describe debugging a really difficult issue"
-        - "Example of learning something new under pressure"
-        - "Walk me through a time you were completely stuck - how did you figure it out?"
-        - "Tell me about the hardest bug you've encountered"
-
-        For non-traditional: Accept any technical problem-solving, even from learning context.
-
-        CRITICAL: Do NOT repeat topics. Every question should cover something NEW."""
-
+For non-traditional: Accept any technical problem-solving, even if from learning/bootcamp context."""
+        
         elif questions_asked >= 5:
-            question_focus = """FIFTH+ QUESTION - Leadership/impact/growth OR final resume coverage:
+            question_focus = """FIFTH+ QUESTION - Leadership/impact/growth:
+Examples (VARY your phrasing):
+- "Tell me about a time you took initiative on a project"
+- "What's the most important technical decision you've made?"
+- "Describe your biggest achievement in software engineering"
+- "Tell me about something you built that you're really proud of"
+- "Walk me through a time you had to teach yourself something completely new"
 
-        LAST CHANCE: Check resume for anything NOT discussed yet.
-
-        If uncovered items exist:
-        - "Before we move on, tell me about [FINAL ITEM]"
-        - "I want to hear about [LAST PROJECT/EXPERIENCE]"
-
-        If everything covered, ask about:
-        - "Tell me about a time you took initiative on a project"
-        - "What's the most important technical decision you've made?"
-        - "Describe your biggest achievement in software engineering so far"
-        - "Tell me about something you built that you're really proud of"
-        - "Walk me through learning a completely new technology on your own"
-
-        VARY TOPICS. Each question should feel different from the last. Be creative."""
+Vary topics - don't repeat previous themes. Be creative with your questions."""
         
         prompt = f"""You are an experienced technical interviewer for a Software Engineering Internship position.
 
 INTERVIEW PHASE: BEHAVIORAL (Question {questions_asked}/5)
 CANDIDATE LEVEL: {level.upper()}
 
-CRITICAL RULE - TOPIC VARIETY
-You MUST ask about DIFFERENT things from the candidate's resume. 
-
-RESUME PDF IS ATTACHED - YOU CAN SEE IT!
-- If Question 1 was about Internship A, then Question 2 should be about Project B or Internship C
-- If Question 2 was about Project X, then Question 3 should be about Project Y or behavioral teamwork
-- NEVER ask "tell me more about [same thing]" twice in a row
-- SCAN THE RESUME for multiple experiences/projects and ROTATE through them
-
-Track what you've asked about:
-Question 1: Usually intro/background
-Question 2: Different internship or main project  
-Question 3: Another project OR teamwork behavioral
-Question 4: Problem-solving OR remaining experience
-Question 5: Leadership OR final coverage
-
-SHOW VARIETY. Every question = NEW topic from resume.
-
 {non_traditional_note}
-
-{realism_rules}
 
 CRITICAL RULES:
 1. Resume PDF is attached - see ALL experience and projects
@@ -1063,7 +870,7 @@ CRITICAL RULES:
 {question_focus}
 
 CONVERSATION STYLE:
-- Warm, professional, encouraging (but realistic about poor answers)
+- Warm, professional, encouraging
 - Show genuine interest and curiosity
 - VARY your transitions and acknowledgments:
   * "That makes sense", "Interesting", "I see", "Good example", "Great", "I appreciate that", "Understood", "Got it", "Makes sense"
@@ -1089,6 +896,9 @@ Check resume PDF for multiple internships/projects. Reference different ones."""
         return prompt
     
     def _get_technical_system_prompt(self, level: str) -> str:
+        """
+        Generate system prompt for technical phase
+        """
         prompt = f"""You are an experienced technical interviewer for a Software Engineering Internship position.
 
 INTERVIEW PHASE: TECHNICAL (MAX 45 MIN)
@@ -1098,34 +908,23 @@ YOUR ROLE:
 - Guide through problem
 - See code in real-time
 - Ask about approach first
-- Provide hints (NOT solutions or algorithms)
+- Provide hints (NOT solutions)
 - Help with syntax if forgotten
 - Analyze results when they run code
 - Discuss time/space complexity
 
-BE REALISTIC ABOUT STRUGGLES:
-- If they're completely stuck for 5+ minutes: "It seems like you're struggling with this approach. Let me give you a hint: [general direction]"
-- If they ask for the solution directly: "I can't give you the solution, but I can help guide you. What approaches have you considered?"
-- If their approach is fundamentally wrong: "Hmm, I think that approach might be difficult. Have you considered [alternative direction]?"
-- If they copy-paste without understanding: "Can you walk me through what this code does? Why did you choose this approach?"
-- If they're giving up: "I understand this is challenging. Let's break it down into smaller steps. What's the first thing we need to do?"
+GUIDANCE: {'Be more helpful, clearer hints' if level == 'intern' else 'Expect them to drive more'}
 
-GUIDANCE: {'Be more helpful with clearer hints, but still make them think' if level == 'intern' else 'Expect them to drive more independently, fewer hints'}
-
-Be conversational but realistic. Don't pretend everything is going well if it's not.
-
-VARY your language and responses:
+Be conversational, not robotic. VARY your language and responses:
 - Different ways to ask about approach: "What's your plan?", "How would you tackle this?", "Walk me through your thinking", "What approach are you considering?"
 - Different hints: "Think about...", "Consider...", "What if you...", "Have you thought about...", "Another approach might be..."
 - Different encouragements: "Good thinking", "You're on the right track", "That makes sense", "Exactly", "Nice", "Good idea"
-- When stuck: "Let's take a step back", "What's tripping you up?", "What have you tried?", "Break this down for me"
 
-DO NOT use a phrase you have already used."""
+Don't use the same phrases every time."""
         
         return prompt
     
     def _call_gemini(self, system_prompt: str, user_prompt: str, transcript: List[Dict] = None) -> str:
-        
         try:
             # build convo history from transcript
             history_text = ""
@@ -1138,7 +937,6 @@ DO NOT use a phrase you have already used."""
             full_prompt = f"{system_prompt}\n\n{history_text}{user_prompt}"
             
             
-        
             if self.uploaded_resume_file:
                 response = self.client.models.generate_content(
                     model=self.model_name,
