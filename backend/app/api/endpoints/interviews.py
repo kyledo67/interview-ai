@@ -331,6 +331,37 @@ def end_interview(
         "evaluation": evaluation
     }
 
+@router.post("/interviews/{interview_id}/get-technical-problem")
+def get_technical_problem(
+    interview_id: int,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    interview_service: InterviewService = request.app.state.interview_service
+    
+    interview = db.query(Interview).filter(
+        Interview.id == interview_id,
+        Interview.user_id == user.id,
+        Interview.status == "active"
+    ).first()
+    
+    if not interview:
+        raise HTTPException(status_code=404, detail="Active interview not found")
+    
+    candidate_level = interview.meta_info.get("candidate_level", "intern")
+    
+    technical_data = interview_service._generate_technical_question(candidate_level)
+    
+    interview.meta_info["mode"] = "technical"
+    interview.meta_info["technical_question"] = technical_data
+    interview.meta_info["technical_start_time"] = datetime.now().isoformat()
+    
+    db.commit()
+    
+    return {
+        "technical_data": technical_data
+    }
 
 @router.get("/interviews/", response_model=list[InterviewSummaryLite])
 def get_all_user_interviews(
