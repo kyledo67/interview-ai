@@ -564,29 +564,71 @@ int main() {
     
     return result;
   };
+  const fetchTechnicalProblem = async () => {
+  if (!interviewId) return;
+  
+  try {
+    const response = await fetch(
+      `https://interview-ai-crdv.onrender.com/interviews/${interviewId}/get-technical-problem`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      }
+    );
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      
+      setCurrentProblem({
+        title: data.technical_data.title,
+        difficulty: data.technical_data.difficulty,
+        description: data.technical_data.description,
+        starter_code: data.technical_data.starter_code,
+        function_name: data.technical_data.function_name
+      });
+      
+      // set the starter code
+      if (data.technical_data.starter_code) {
+        setCode(data.technical_data.starter_code);
+      }
+      
+      console.log('Technical problem loaded:', data.technical_data.title);
+    } else {
+      console.error('Failed to fetch technical problem');
+    }
+  } catch (error) {
+    console.error('Error fetching technical problem:', error);
+  }
+};
 
   const transitionToTechnical = (technicalData) => {
-    setIsTransitioning(true);
+  setIsTransitioning(true);
+  
+  setTimeout(() => {
+    setCurrentPhase('technical');
+    setIsTransitioning(false);
     
-    setTimeout(() => {
-      setCurrentPhase('technical');
-      setIsTransitioning(false);
+    if (technicalData) {
+      setCurrentProblem({
+        title: technicalData.title,
+        difficulty: technicalData.difficulty,
+        description: technicalData.description,
+        starter_code: technicalData.starter_code,
+        function_name: technicalData.function_name
+      });
       
-      if (technicalData) {
-        setCurrentProblem({
-          title: technicalData.title,
-          difficulty: technicalData.difficulty,
-          description: technicalData.description,
-          starter_code: technicalData.starter_code,
-          function_name: technicalData.function_name
-        });
-        
-        if (technicalData.starter_code) {
-          setCode(technicalData.starter_code);
-        }
+      if (technicalData.starter_code) {
+        setCode(technicalData.starter_code);
       }
-    }, 800);
-  };
+    } else {
+      fetchTechnicalProblem();
+    }
+  }, 800);
+};
 
   const executeCode = async () => {
     if (!code.trim()) return;
@@ -684,7 +726,7 @@ int main() {
     console.log('Interview ended');
     setShowEndCallDialog(false);
     
-    window.location.href = '/';
+    window.location.href = '/results';
   };
 
   const cancelEndCall = () => {

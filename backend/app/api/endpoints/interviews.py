@@ -365,3 +365,33 @@ def get_specific_user_interviews(
         end_time=specific_interview.end_time,
         transcript=specific_interview.transcript
     )
+
+@router.get("/interviews/{interview_id}/get-technical-problem")
+def get_technical_problem(
+    interview_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    interview = db.query(Interview).filter(
+        Interview.id == interview_id,
+        Interview.user_id == user.id,
+        Interview.status == "active"
+    ).first()
+    
+    if not interview:
+        raise HTTPException(status_code=404, detail="Active interview not found")
+    
+
+    if interview.meta_info.get("mode") != "technical":
+        raise HTTPException(status_code=400, detail="Interview is not in technical phase")
+    
+
+    technical_question = interview.meta_info.get("technical_question")
+    
+    if not technical_question:
+        raise HTTPException(status_code=404, detail="No technical problem found")
+    
+    return {
+        "technical_data": technical_question,
+        "candidate_level": interview.meta_info.get("candidate_level", "intern")
+    }
