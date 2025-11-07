@@ -6,7 +6,7 @@ const authcontext = createContext();
 export const Auth = () => {
     const context = useContext(authcontext);
     if (!context) {
-        throw new Error('Auth must be used within authprovider');
+        throw new Error('no authprovider');
     }
     return context;
 };
@@ -17,28 +17,33 @@ export const Authprovider = ({ children }) => {
     const [loading, setloading] = useState(true);
     const refreshIntervalRef = useRef(null);
 
-    // Check if user is already logged in when app starts
+   
     useEffect(() => {
+        console.log('🔄 useEffect: Initial mount, calling checkauth');
         checkauth();
+        
+        // clean interval on unmount
         return () => {
+            console.log('🧹 useEffect: Component unmounting, clearing interval');
             if (refreshIntervalRef.current) {
                 clearInterval(refreshIntervalRef.current);
             }
         };
     }, []);
 
-    // Set up automatic token refresh when user is authenticated
+    // set up automatic token refresh when user is authenticated
     useEffect(() => {
         if (user) {
+            console.log('   Setting up token refresh');
             setupTokenRefresh();
         } else {
+            console.log('   Clearing token refresh');
             clearTokenRefresh();
         }
     }, [user]);
 
-    // Setup automatic token refresh every 25 minutes (before 30min expiry)
     const setupTokenRefresh = () => {
-        clearTokenRefresh(); // Clear any existing interval
+        clearTokenRefresh(); 
         
         refreshIntervalRef.current = setInterval(async () => {
             console.log('Auto-refreshing token...');
@@ -46,146 +51,162 @@ export const Authprovider = ({ children }) => {
         }, 25 * 60 * 1000); 
     };
 
-
     const clearTokenRefresh = () => {
         if (refreshIntervalRef.current) {
             clearInterval(refreshIntervalRef.current);
             refreshIntervalRef.current = null;
+        } else {
+            console.log('No interva');
         }
     };
 
-
     const refreshToken = async () => {
         try {
-            const response = await fetch('http://localhost:8001/refresh', {
+            const response = await fetch('https://interview-ai-crdv.onrender.com/refresh', {
                 method: 'POST',
                 credentials: 'include'
             });
 
+            console.log('   Refresh response status:', response.status);
             if (response.ok) {
-                console.log('Token refreshed successfully');
                 return true;
             } else {
-                console.log('Token refresh failed, logging out...');
                 await logout();
                 return false;
             }
         } catch (error) {
-            console.error('Token refresh error:', error);
             await logout();
             return false;
         }
     };
 
-    // api call function that handles token refresh automatically
+   
     const apiCall = async (url, options = {}) => {
-        // debug: making sure it's the right url
-        console.log(url);
+
         try {
+            console.log('   Making initial fetch...');
             let response = await fetch(url, {
                 ...options,
                 credentials: 'include'
             });
 
-            // If  401, try to refresh token and retry
+            console.log('   Response status:', response.status);
+    
             if (response.status === 401) {
-                console.log('Got 401, attempting token refresh...');
                 const refreshSuccess = await refreshToken();
                 
                 if (refreshSuccess) {
-                    // Retry the original request
                     response = await fetch(url, {
                         ...options,
                         credentials: 'include'
                     });
                 } else {
-                    // Refresh failed, user will be logged out by refreshToken function
-                    throw new Error('Authentication failed');
+                    throw new Error('auth failed');
                 }
             }
 
             return response;
         } catch (error) {
-            console.error('API call failed:', error);
+            console.error(error)
             throw error;
         }
     };
 
-    // Calls backend to see if user has valid session cookies
+  
     const checkauth = async () => {
         try {
-            const response = await apiCall('/me');
+            const response = await apiCall('https://interview-ai-crdv.onrender.com/me');
+            
             if (response.ok) {
                 const userdata = await response.json();
-                setuser(userdata); // Store user info in state
+                setuser(userdata); 
             } else {
                 setuser(null);
             }
         } catch (error) {
-            console.error('Auth check failed:', error);
+            
             setuser(null);
         } finally {
-            setloading(false); // Stop loading spinner
+            
+            setloading(false); 
         }
     };
 
-    // Handles login form submission
+
     const login = async (email, password) => {
+        
+        
         try {
-            const response = await fetch('http://localhost:8001/login', {
+            console.log('   Fetching /login endpoint...');
+            const response = await fetch('https://interview-ai-crdv.onrender.com/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                credentials: 'include', // Important: allows cookies to be set
+                credentials: 'include', 
                 body: JSON.stringify({ email, password }),
             });
 
+            console.log('   Login response status:', response.status);
+            console.log('   Login response ok:', response.ok);
+            console.log('   Login response headers:', Object.fromEntries(response.headers.entries()));
+
             if (response.ok) {
                 const data = await response.json();
-                // Check current user after successful login
                 await checkauth();
                 return { success: true, message: data.message };
             } else {
+                console.log('auth no work');
                 const error = await response.json();
+                console.error('   Error detail:', error);
                 return { success: false, message: error.detail };
             }
         } catch (error) {
+            console.error(error.name);
+            console.error(error.message);
+            console.error('Full error:', error);
             return { success: false, message: 'error' };
         }
     };
 
-    // Handles registration form submission
     const register = async (email, password) => {
+        
         try {
-            const response = await fetch('http://localhost:8001/register', {
+            const response = await fetch('https://interview-ai-crdv.onrender.com/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({ email, password })
             });
 
             if (response.ok) {
+                console.log('success');
                 return { success: true, message: 'Registration successful' };
             } else {
+                console.log('register failed');
                 const error = await response.json();
+                console.error('Error:', error);
                 return { success: false, message: error.detail };
             }
         } catch (error) {
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+            console.error('Full error:', error);
             return { success: false, message: ' error' };
         }
     };
 
-    // Clears user session by removing cookies
+   
     const logout = async () => {
-        // Clear the refresh interval
         clearTokenRefresh();
         
+        console.log('   Clearing cookies...');
         // Clear cookies by making them expire immediately
         document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         document.cookie = "refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        setuser(null); // Clear user from state
+        setuser(null);
     };
 
     // Values available to all components using Auth()
@@ -195,9 +216,9 @@ export const Authprovider = ({ children }) => {
         register,
         logout,
         loading,
-        isauthenticated: !!user, // Converts user object to true/false
+        isauthenticated: !!user, 
         apiCall, 
-        refreshToken // Expose manual refresh function if needed
+        refreshToken 
     };
 
     return (
