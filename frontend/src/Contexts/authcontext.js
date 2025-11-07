@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 
 const authcontext = createContext();
 
-// Custom hook to use auth anywhere
+
 export const Auth = () => {
     const context = useContext(authcontext);
     if (!context) {
@@ -11,7 +11,7 @@ export const Auth = () => {
     return context;
 };
 
-// Wrapper component that provides auth to all child components
+
 export const Authprovider = ({ children }) => {
     const [user, setuser] = useState(null);
     const [loading, setloading] = useState(true);
@@ -20,8 +20,6 @@ export const Authprovider = ({ children }) => {
     // Check if user is already logged in when app starts
     useEffect(() => {
         checkauth();
-        
-        // Cleanup interval on unmount
         return () => {
             if (refreshIntervalRef.current) {
                 clearInterval(refreshIntervalRef.current);
@@ -48,7 +46,7 @@ export const Authprovider = ({ children }) => {
         }, 25 * 60 * 1000); 
     };
 
-    // Clear the refresh interval
+
     const clearTokenRefresh = () => {
         if (refreshIntervalRef.current) {
             clearInterval(refreshIntervalRef.current);
@@ -56,7 +54,7 @@ export const Authprovider = ({ children }) => {
         }
     };
 
-    // Refresh the access token using refresh token
+
     const refreshToken = async () => {
         try {
             const response = await fetch('http://localhost:8001/refresh', {

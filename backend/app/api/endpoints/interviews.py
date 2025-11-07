@@ -249,7 +249,7 @@ def end_interview(
     """
     interview_service: InterviewService = request.app.state.interview_service
     
-    # Get interview
+ 
     interview = db.query(Interview).filter(
         Interview.id == id,
         Interview.user_id == user.id
@@ -258,7 +258,7 @@ def end_interview(
     if not interview:
         raise HTTPException(status_code=404, detail="Interview does not exist")
     
-    # Update transcript with any new messages from frontend
+   
     new_transcript = [
         {
             "speaker": message.speaker,
@@ -299,7 +299,6 @@ def end_interview(
     
     db.commit()
     
-    # Delete resume file
     filepath = interview.resume_path
     if filepath and os.path.exists(filepath):
         try:
@@ -346,9 +345,6 @@ def get_specific_user_interviews(
     user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)
 ):
-    """
-    Get specific interview details
-    """
     specific_interview = db.query(Interview).filter(
         Interview.user_id == user.id, 
         Interview.id == id
