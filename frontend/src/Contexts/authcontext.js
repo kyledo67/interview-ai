@@ -20,10 +20,9 @@ export const Authprovider = ({ children }) => {
    
     useEffect(() => {
         checkauth();
-        
         // clean interval on unmount
         return () => {
-            console.log('🧹 useEffect: Component unmounting, clearing interval');
+            console.log('useEffect: Component unmounting, clearing interval');
             if (refreshIntervalRef.current) {
                 clearInterval(refreshIntervalRef.current);
             }
@@ -201,7 +200,7 @@ export const Authprovider = ({ children }) => {
     const logout = async () => {
         clearTokenRefresh();
         
-        console.log('   Clearing cookies...');
+        console.log('  Clearing cookies...');
         // Clear cookies by making them expire immediately
         document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         document.cookie = "refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
