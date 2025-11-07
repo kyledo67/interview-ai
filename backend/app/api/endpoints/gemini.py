@@ -121,32 +121,11 @@ ASSESSMENT:
     
     def generate_initial_message(self, resume_data: Dict) -> str:
         level = resume_data["level"]
-        is_non_traditional = resume_data.get("is_non_traditional", False)
-        background_context = resume_data.get("background_context", "")
+        system_prompt = self._get_behavioral_system_prompt(resume_data, 1)
         
-        # Special system prompt for initial greeting
-        system_prompt = f"""You are an experienced technical interviewer for a {'Software Engineering Internship' if level == 'intern' else 'New Grad Software Engineering'} position.
-
-INTERVIEW PHASE: INITIAL GREETING (NOT a behavioral question yet)
-CANDIDATE LEVEL: {level.upper()}
-{"NON-TRADITIONAL BACKGROUND: " + background_context if is_non_traditional else ""}
-
-YOUR TASK:
-Start with a warm, friendly greeting that makes the candidate feel comfortable.
-
-REQUIRED GREETING STRUCTURE:xs
-1. Introduce yourself (name + role at company)
-2. Thank them for joining
-3. Ask: "How's your day going so far?" or "How are you doing today?"
-
-VARY your greeting style. Examples:
-- "Hi [Name]! I'm [Interviewer Name], a software engineer here at [Company]. Thanks so much for taking the time to chat with me today. Before we dive in, how's your day going so far?"
-- "Hey [Name], great to meet you! I'm [Interviewer Name] from the engineering team. Really appreciate you joining me for this interview. How are you doing today?"
-- "Hello [Name]! I'm [Interviewer Name], senior engineer at [Company]. Thanks for being here today. How's your day been treating you?"
-
-Keep it natural and conversational. DO NOT ask any behavioral questions yet - just the greeting and "how's your day" question."""
+        user_prompt = """Start the interview. Greet the candidate warmly and professionally, then ask your first behavioral question. 
         
-        user_prompt = """Generate the initial greeting for the interview. Remember: just introduce yourself, thank them, and ask how their day is going. No behavioral questions yet."""
+Make it conversational and natural. Do NOT explain the interview format or mention switching phases."""
         
         response = self._call_gemini(system_prompt, user_prompt)
         return response
@@ -164,6 +143,9 @@ Keep it natural and conversational. DO NOT ask any behavioral questions yet - ju
         asked_candidate_questions: bool = False,
         transcript: list[dict] = None,
     ) -> Dict:
+        """
+        IMPROVED: Better handling of all phases
+        """
         if mode == "behavioral":
             # Check if should switch to technical
             should_switch = self._should_switch_to_technical(
@@ -766,7 +748,7 @@ Be fair. Most candidates score 5-7."""
         non_traditional_note = ""
         if is_non_traditional:
             non_traditional_note = f"""
-⚠️ NON-TRADITIONAL CANDIDATE DETECTED ⚠️
+NON-TRADITIONAL CANDIDATE DETECTED 
 Background: {background_context}
 - This candidate does NOT have a traditional CS background
 - They are being placed at INTERN level regardless of graduation date

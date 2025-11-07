@@ -19,7 +19,6 @@ export const Authprovider = ({ children }) => {
 
    
     useEffect(() => {
-        console.log('🔄 useEffect: Initial mount, calling checkauth');
         checkauth();
         
         // clean interval on unmount
