@@ -11,6 +11,7 @@ export const Auth = () => {
     return context;
 };
 
+
 export const Authprovider = ({ children }) => {
     const [user, setuser] = useState(null);
     const [loading, setloading] = useState(true);
@@ -50,7 +51,6 @@ export const Authprovider = ({ children }) => {
         }, 25 * 60 * 1000); 
     };
 
-   
     const clearTokenRefresh = () => {
         if (refreshIntervalRef.current) {
             clearInterval(refreshIntervalRef.current);
@@ -60,7 +60,6 @@ export const Authprovider = ({ children }) => {
         }
     };
 
- 
     const refreshToken = async () => {
         try {
             const response = await fetch('https://interview-ai-crdv.onrender.com/refresh', {
