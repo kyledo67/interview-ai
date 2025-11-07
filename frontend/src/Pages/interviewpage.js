@@ -46,6 +46,7 @@ const InterviewPage = () => {
   const [interviewId, setInterviewId] = useState(null);
   const [transcript, setTranscript] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
+  
   const [isAIThinking, setIsAIThinking] = useState(false);
   const [candidateLevel, setCandidateLevel] = useState('');
   const [currentAIMessage, setCurrentAIMessage] = useState('');
@@ -54,14 +55,11 @@ const InterviewPage = () => {
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const speechRecognitionRef = useRef(null);
-  const isMicOnRef = useRef(isMicOn);
-  const isAISpeakingRef = useRef(isAISpeaking);
+  const isMicOnRef = useRef(isMicOn); 
   const streamRef = useRef(null);
   const speechSynthesisRef = useRef(null);
   const lastTranscriptLengthRef = useRef(0);
-  const isInterviewStartingRef = useRef(false);
-  const speechDebounceTimerRef = useRef(null);
-  const pendingSpeechRef = useRef('');
+
   const languages = [
     { id: 71, name: "Python", monaco: "python" }, 
     { id: 62, name: "Java", monaco: "java" },
@@ -76,7 +74,7 @@ const InterviewPage = () => {
   }, []); 
 
   useEffect(() => {
-  return () => {
+    return () => {
       if (speechRecognitionRef.current) {
         speechRecognitionRef.current.stop();
       }
@@ -85,9 +83,6 @@ const InterviewPage = () => {
       }
       if (speechSynthesisRef.current) {
         window.speechSynthesis.cancel();
-      }
-      if (speechDebounceTimerRef.current) {
-        clearTimeout(speechDebounceTimerRef.current);
       }
     };
   }, []);
@@ -124,10 +119,6 @@ int main() {
   }, [isMicOn]);
 
   useEffect(() => {
-    isAISpeakingRef.current = isAISpeaking;
-  }, [isAISpeaking]);
-
-  useEffect(() => {
     if (streamRef.current && userVideoRef.current) {
       userVideoRef.current.srcObject = streamRef.current;
     }
@@ -139,7 +130,7 @@ int main() {
         const newMessages = transcript.slice(lastTranscriptLengthRef.current);
         const lastMessage = newMessages[newMessages.length - 1];
         
-        if (lastMessage && lastMessage.speaker === 'User' && !isAISpeaking) {
+        if (lastMessage && lastMessage.speaker === 'User') {
           await sendMessageToAI(lastMessage.message);
         }
         
@@ -148,7 +139,7 @@ int main() {
     };
     
     handleNewUserMessage();
-  }, [transcript, isAISpeaking]);
+  }, [transcript]);
 
   const initializeWebcam = async () => {
     try {
@@ -196,7 +187,7 @@ int main() {
     const dataArray = new Uint8Array(bufferLength);
     
     const checkAudioLevel = () => {
-      if (isMicOnRef.current && analyserRef.current && !isAISpeakingRef.current) {
+      if (isMicOnRef.current && analyserRef.current) {
         analyserRef.current.getByteFrequencyData(dataArray);
         
         let sum = 0;
@@ -225,7 +216,7 @@ int main() {
       
       const recognition = speechRecognitionRef.current;
       recognition.continuous = true;
-      recognition.interimResults = true;
+      recognition.interimResults = false;
       recognition.lang = 'en-US';
       recognition.maxAlternatives = 1;
       
@@ -235,41 +226,13 @@ int main() {
       };
       
       recognition.onresult = (event) => {
-        if (isAISpeakingRef.current) {
-          console.log('AI is speaking, ignoring speech input');
-          return;
-        }
-        
-        // Clear existing debounce timer
-        if (speechDebounceTimerRef.current) {
-          clearTimeout(speechDebounceTimerRef.current);
-        }
-        
-        let finalTranscript = '';
-        let interimTranscript = '';
-        
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            finalTranscript += transcript;
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        
-        // Store the current transcript (final + interim)
-        const currentText = (finalTranscript + interimTranscript).trim();
-        
-        if (currentText) {
-          pendingSpeechRef.current = currentText;
-          
-          // Wait 2 seconds of silence before sending to transcript
-          speechDebounceTimerRef.current = setTimeout(() => {
-            if (pendingSpeechRef.current && !isAISpeakingRef.current) {
-              addToTranscript('User', pendingSpeechRef.current);
-              pendingSpeechRef.current = '';
+            const transcriptText = event.results[i][0].transcript.trim();
+            if (transcriptText) {
+              addToTranscript('User', transcriptText);
             }
-          }, 1500); 
+          }
         }
       };
       
@@ -290,14 +253,7 @@ int main() {
       
       recognition.onend = () => {
         console.log('Speech ended');
-        if (pendingSpeechRef.current && !isAISpeakingRef.current) {
-          if (speechDebounceTimerRef.current) {
-            clearTimeout(speechDebounceTimerRef.current);
-          }
-          addToTranscript('User', pendingSpeechRef.current);
-          pendingSpeechRef.current = '';
-        }
- 
+        
         if (isMicOnRef.current) {
           console.log('restarting');
           setTimeout(() => {
@@ -324,7 +280,7 @@ int main() {
         }
       };
       
-      if (isMicOnRef.current) {
+      if (isMicOn) {
         try {
           recognition.start();
           setIsRecording(true);
@@ -341,15 +297,8 @@ int main() {
   const toggleMicrophone = () => {
     const newMicState = !isMicOn;
     setIsMicOn(newMicState);
-    isMicOnRef.current = newMicState;
-
-    if (speechDebounceTimerRef.current) {
-      clearTimeout(speechDebounceTimerRef.current);
-    }
-    pendingSpeechRef.current = '';
-
+    
     if (newMicState) {
-      
       if (speechRecognitionRef.current) {
         try {
           speechRecognitionRef.current.abort();
@@ -362,15 +311,13 @@ int main() {
       setIsRecording(false);
       
       setTimeout(() => {
-        
-        if (newMicState) {
+        if (isMicOn) {
           console.log('new instance');
           initializeSpeechRecognition();
         }
       }, 300);
       
     } else {
-      
       if (speechRecognitionRef.current) {
         try {
           speechRecognitionRef.current.abort();
@@ -402,7 +349,7 @@ int main() {
     setIsAIThinking(true);
     
     try {
-      const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/message`, {
+      const response = await fetch(`http://localhost:8001/interviews/${interviewId}/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -460,7 +407,7 @@ int main() {
     setIsAISpeaking(true);
     
     try {
-      const response = await fetch('https://interview-ai-crdv.onrender.com/tts', {
+      const response = await fetch('http://localhost:8001/tts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -503,15 +450,8 @@ int main() {
   };
 
   const startInterview = async () => {
-    if (isInterviewStartingRef.current) {
-      console.log('Interview already starting, skipping duplicate call');
-      return;
-    }
-    
-    isInterviewStartingRef.current = true;
-    
     try {
-      const response = await fetch('https://interview-ai-crdv.onrender.com/interviews/start', {
+      const response = await fetch('http://localhost:8001/interviews/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -525,6 +465,7 @@ int main() {
         setInterviewId(result.interview_id);
         setCandidateLevel(result.candidate_level);
         
+        addToTranscript('AI', result.ai_message);
         setCurrentAIMessage(result.ai_message);
         
         speakText(result.ai_message);
@@ -538,12 +479,10 @@ int main() {
         if (response.status === 401) {
           console.error('unauthorized');
           window.location.href = '/';
-        }
-        isInterviewStartingRef.current = false;
+        } 
       }
     } catch (error) {
       console.error('Error starting interview:', error);
-      isInterviewStartingRef.current = false;
     }
   };
 
@@ -554,7 +493,7 @@ int main() {
     }
     
     try {
-      const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/end`, {
+      const response = await fetch(`http://localhost:8001/interviews/${interviewId}/end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -625,29 +564,71 @@ int main() {
     
     return result;
   };
+  const fetchTechnicalProblem = async () => {
+  if (!interviewId) return;
+  
+  try {
+    const response = await fetch(
+      `https://interview-ai-crdv.onrender.com/interviews/${interviewId}/get-technical-problem`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      }
+    );
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      
+      setCurrentProblem({
+        title: data.technical_data.title,
+        difficulty: data.technical_data.difficulty,
+        description: data.technical_data.description,
+        starter_code: data.technical_data.starter_code,
+        function_name: data.technical_data.function_name
+      });
+      
+      // set the starter code
+      if (data.technical_data.starter_code) {
+        setCode(data.technical_data.starter_code);
+      }
+      
+      console.log('Technical problem loaded:', data.technical_data.title);
+    } else {
+      console.error('Failed to fetch technical problem');
+    }
+  } catch (error) {
+    console.error('Error fetching technical problem:', error);
+  }
+};
 
   const transitionToTechnical = (technicalData) => {
-    setIsTransitioning(true);
+  setIsTransitioning(true);
+  
+  setTimeout(() => {
+    setCurrentPhase('technical');
+    setIsTransitioning(false);
     
-    setTimeout(() => {
-      setCurrentPhase('technical');
-      setIsTransitioning(false);
+    if (technicalData) {
+      setCurrentProblem({
+        title: technicalData.title,
+        difficulty: technicalData.difficulty,
+        description: technicalData.description,
+        starter_code: technicalData.starter_code,
+        function_name: technicalData.function_name
+      });
       
-      if (technicalData) {
-        setCurrentProblem({
-          title: technicalData.title,
-          difficulty: technicalData.difficulty,
-          description: technicalData.description,
-          starter_code: technicalData.starter_code,
-          function_name: technicalData.function_name
-        });
-        
-        if (technicalData.starter_code) {
-          setCode(technicalData.starter_code);
-        }
+      if (technicalData.starter_code) {
+        setCode(technicalData.starter_code);
       }
-    }, 800);
-  };
+    } else {
+      fetchTechnicalProblem();
+    }
+  }, 800);
+};
 
   const executeCode = async () => {
     if (!code.trim()) return;
@@ -655,7 +636,7 @@ int main() {
     setIsExecuting(true);
     
     try {
-      const response = await fetch('https://interview-ai-crdv.onrender.com/code/execute', {
+      const response = await fetch('http://localhost:8001/code/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -702,7 +683,7 @@ int main() {
     if (!interviewId) return;
     
     try {
-      const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/execute-code`, {
+      const response = await fetch(`http://localhost:8001/interviews/${interviewId}/execute-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -739,17 +720,13 @@ int main() {
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
-    if (speechDebounceTimerRef.current) {
-      clearTimeout(speechDebounceTimerRef.current);
-    }
-    pendingSpeechRef.current = '';
     
     await endInterviewWithBackend();
     
     console.log('Interview ended');
     setShowEndCallDialog(false);
     
-    navigate('/results', { replace: true});
+    window.location.href = '/results';
   };
 
   const cancelEndCall = () => {
@@ -781,44 +758,6 @@ int main() {
             className={`control-button ${isCameraOn ? 'camera-on' : 'camera-off'}`}
           >
             {isCameraOn ? <Camera size={20} /> : <CameraOff size={20} />}
-          </button>
-
-          <button
-            onClick={async () => {
-              if (currentPhase === 'technical') return;
-              
-              try {
-                const response = await fetch(`https://interview-ai-crdv.onrender.com/interviews/${interviewId}/get-technical-problem`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  credentials: 'include',
-                  body: JSON.stringify({
-                    candidate_level: candidateLevel
-                  })
-                });
-                
-                if (response.ok) {
-                  const data = await response.json();
-                  transitionToTechnical(data.technical_data);
-                } else {
-                  console.error('Failed to fetch technical problem');
-                }
-              } catch (error) {
-                console.error('Error fetching technical problem:', error);
-              }
-            }}
-            className="control-button"
-            style={{ 
-              background: currentPhase === 'technical' ? '#4CAF50' : '#2196F3',
-              marginRight: '10px'
-            }}
-            disabled={currentPhase === 'technical'}
-          >
-            <span style={{ fontSize: '12px' }}>
-              {currentPhase === 'technical' ? '✓ Technical' : 'Switch to Technical'}
-            </span>
           </button>
 
           <button 
@@ -863,7 +802,7 @@ int main() {
                   <span>Interviewer</span>
                 </div>
                 
-                {(isAIThinking || isAISpeaking) && (
+                {isAIThinking && (
                   <div style={{ 
                     position: 'absolute', 
                     top: '10px', 
@@ -874,11 +813,28 @@ int main() {
                     fontSize: '12px',
                     color: 'white'
                   }}>
-                    {isAIThinking ? 'Thinking...' : 'Speaking...'}
+                    Thinking...
                   </div>
                 )}
               </div>
             </div>
+
+            {currentAIMessage && (
+              <div style={{
+                position: 'absolute',
+                bottom: '20px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(0,0,0,0.8)',
+                color: 'white',
+                padding: '15px 25px',
+                borderRadius: '10px',
+                maxWidth: '80%',
+                textAlign: 'center'
+              }}>
+                {currentAIMessage}
+              </div>
+            )}
           </div>
         )}
 
