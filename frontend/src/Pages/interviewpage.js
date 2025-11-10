@@ -726,7 +726,7 @@ int main() {
     console.log('Interview ended');
     setShowEndCallDialog(false);
     
-    window.location.href = '/results';
+    navigate('/results');
   };
 
   const cancelEndCall = () => {
