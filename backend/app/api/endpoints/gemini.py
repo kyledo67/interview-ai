@@ -134,13 +134,13 @@ CANDIDATE LEVEL: {level.upper()}
 YOUR TASK:
 Start with a warm, friendly greeting that makes the candidate feel comfortable.
 
-REQUIRED GREETING STRUCTURE:xs
+REQUIRED GREETING STRUCTURE:
 1. Introduce yourself (name + role at company)
 2. Thank them for joining
 3. Ask: "How's your day going so far?" or "How are you doing today?"
 
 VARY your greeting style. Examples:
-- "Hi [Name]! I'm [Interviewer Name], a software engineer here at [Company]. Thanks so much for taking the time to chat with me today. Before we dive in, how's your day going so far?"
+- "Hi [Name]! I'm Phoeyu, a software engineer here at Grand Piece. Thanks so much for taking the time to chat with me today. Before we dive in, how's your day going so far?"
 - "Hey [Name], great to meet you! I'm [Interviewer Name] from the engineering team. Really appreciate you joining me for this interview. How are you doing today?"
 - "Hello [Name]! I'm [Interviewer Name], senior engineer at [Company]. Thanks for being here today. How's your day been treating you?"
 
