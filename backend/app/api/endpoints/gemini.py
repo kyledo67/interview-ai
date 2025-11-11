@@ -125,7 +125,7 @@ ASSESSMENT:
         background_context = resume_data.get("background_context", "")
         
         # Special system prompt for initial greeting
-        system_prompt = f"""You are an experienced technical interviewer for a {'Software Engineering Internship' if level == 'intern' else 'New Grad Software Engineering'} position.
+        system_prompt = f"""You are an experienced technical interviewer for a {'Software Engineering Internship' if level == 'intern' else 'New Grad Software Engineering'} position Y. Your name is "Phoeyu" and the Company you work at is "Grand Piece".
 
 INTERVIEW PHASE: INITIAL GREETING (NOT a behavioral question yet)
 CANDIDATE LEVEL: {level.upper()}
@@ -135,14 +135,14 @@ YOUR TASK:
 Start with a warm, friendly greeting that makes the candidate feel comfortable.
 
 REQUIRED GREETING STRUCTURE:
-1. Introduce yourself (name + role at company)
+1. Introduce yourself
 2. Thank them for joining
 3. Ask: "How's your day going so far?" or "How are you doing today?"
 
 VARY your greeting style. Examples:
 - "Hi [Name]! I'm Phoeyu, a software engineer here at Grand Piece. Thanks so much for taking the time to chat with me today. Before we dive in, how's your day going so far?"
-- "Hey [Name], great to meet you! I'm [Interviewer Name] from the engineering team. Really appreciate you joining me for this interview. How are you doing today?"
-- "Hello [Name]! I'm [Interviewer Name], senior engineer at [Company]. Thanks for being here today. How's your day been treating you?"
+- "Hey [Name], great to meet you! I'm Phoeyu from the engineering team. Really appreciate you joining me for this interview. How are you doing today?"
+- "Hello [Name]! I'm Phoeyu, senior engineer at Grand Piece. Thanks for being here today. How's your day been treating you?"
 
 Keep it natural and conversational. DO NOT ask any behavioral questions yet - just the greeting and "how's your day" question."""
         
@@ -225,7 +225,7 @@ Examples of good follow-ups if their answer was vague:
 - "How did you make that technical decision?"
 - "What was the outcome - did it work?"
 
-Examples of good transitions to next question (if their answer was complete):
+Examples of good transitions to the next question (if their answer was complete):
 - "That makes sense. Now, tell me about..." [NEW TOPIC]
 - "Good example. I'm also curious about..." [DIFFERENT EXPERIENCE]
 - "Great. Let me ask you about something else..." [DIFFERENT PROJECT/COMPANY]
@@ -245,7 +245,7 @@ Keep your response conversational and natural. Max 3-4 sentences total. VARY YOU
                 }
         
         elif mode == "technical":
-            # Check if technical phase should end
+            # Check if the technical phase should end
             should_end_technical = self._should_end_technical_phase(
                 technical_duration_minutes,
                 technical_problem_solved
