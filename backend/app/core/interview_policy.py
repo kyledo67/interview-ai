@@ -68,4 +68,6 @@ relevant; do not require keyword matches.""", response_mime_type="application/js
         return json.loads(response.text).get("relevant") is True
     except Exception as exc:
         print(f"Interview relevance check failed: {type(exc).__name__}, status={getattr(exc, 'code', 'unknown')}")
+        if getattr(exc, "code", None) == 429:
+            raise HTTPException(status_code=429, detail="AI request quota reached. Wait a minute before retrying.", headers={"Retry-After":"60"})
         raise HTTPException(status_code=503, detail="Could not check interview relevance. Please try again.")

@@ -3,6 +3,7 @@ import re
 from typing import Dict, Optional, List
 import random
 from google import genai
+from fastapi import HTTPException
 from google.genai import types
 from app.core.interview_policy import BOUNDARY, bounded_history, MAX_REPLY, LANGUAGES
 import hashlib
@@ -955,5 +956,7 @@ Don't use the same phrases every time."""
             )
             return response.text.strip()[:MAX_REPLY]
         except Exception as e:
-            print(f"Gemini API error: {e}")
+            if getattr(e, "code", None) == 429:
+                raise HTTPException(status_code=429, detail="AI request quota reached. Wait a minute before retrying.", headers={"Retry-After":"60"})
+            print(f"Gemini generation failed: {type(e).__name__}")
             return "I could not generate a response just now. Please repeat your interview question."
