@@ -2,6 +2,8 @@
 
 AI mock interviews with a React frontend, FastAPI backend, and PostgreSQL database.
 
+Live app: [InterviewAI on Vercel](https://interview-ai-ashy-eight.vercel.app)
+
 ## Vercel deployment
 
 Import this repository into Vercel with the repository root (`./`) and the **Other** framework preset. `vercel.json` builds React and deploys `api/index.py` as a Python 3.12 function. Static assets use Vercel's CDN; browser routes fall back to React; API routes retain their original paths.
