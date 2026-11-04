@@ -116,7 +116,9 @@ async def execute_code(payload: ExecutionRequest, user: User = Depends(get_curre
     if result.get("status", {}).get("id") == 3:
         status = "Accepted" if solved else "Wrong Answer"
     output = f"{passed}/{len(cases)} test cases passed.\n" + (result.get("stdout") or result.get("stderr") or result.get("compile_output") or "No output received")
+    interview.meta_info["current_code"] = payload.source_code
+    interview.meta_info["language_id"] = payload.language_id
     interview.meta_info["technical_problem_solved"] = solved
-    interview.meta_info["last_execution"] = {"code_hash":hashlib.sha256(payload.source_code.encode()).hexdigest(), "status":status, "output":output[:16000]}
+    interview.meta_info["last_execution"] = {"code_hash":hashlib.sha256(payload.source_code.encode()).hexdigest(), "status":status, "output":output[:16000], "passed":passed, "total":len(cases), "language_id":payload.language_id}
     db.commit()
     return {**result, "status":{"id":(3 if solved else 4) if result.get("status", {}).get("id") == 3 else result.get("status", {}).get("id", 13), "description":status}, "output":output, "problem_solved":solved, "passed":passed, "total":len(cases)}

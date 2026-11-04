@@ -360,7 +360,8 @@ int main() {
         credentials: 'include',
         body: JSON.stringify({
           message: userMessage,
-          current_code: currentPhase === 'technical' ? code : null
+          current_code: currentPhase === 'technical' ? code : null,
+          language_id: selectedLanguage
         })
       });
       
@@ -386,7 +387,8 @@ int main() {
         }
         
       } else {
-        console.error('Failed to get AI response');
+        const error = await response.json();
+        setInterviewError(typeof error.detail === 'string' ? error.detail : 'Message or code exceeds the allowed size.');
       }
     } catch (error) {
       console.error('Error sending message to AI:', error);
@@ -640,6 +642,27 @@ int main() {
     // Phase polling deliberately does not depend on transcript/editor changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interviewId, currentPhase, isAIThinking, isExecuting]);
+
+  useEffect(() => {
+    if (!interviewId || currentPhase !== 'technical') return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/interviews/${interviewId}/context`, {
+          method: 'PUT', credentials: 'include', signal: controller.signal,
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({current_code: code, language_id: selectedLanguage})
+        });
+        if (!response.ok && response.status !== 409) {
+          const data = await response.json();
+          setInterviewError(data.detail || 'Could not sync code context');
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') setInterviewError('Could not sync code context');
+      }
+    }, 1500);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [interviewId, currentPhase, code, selectedLanguage]);
 
   const executeCode = async () => {
     if (!code.trim()) return;

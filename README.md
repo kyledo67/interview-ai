@@ -32,3 +32,11 @@ Install `requirements.txt` plus `pytest`, then run `python -m pytest -q`. Tests 
 Behavioral interviews switch after five replies or 15 minutes. The browser checks the server clock every ten seconds, including when the candidate is silent. Interview JSON state and transcript changes persist across requests. Technical interviews end after a verified solution or 45 minutes.
 
 Run Code uses the authenticated `/code/execute` API and the problem stored on the server. Python and JavaScript submissions implement the named function and are wrapped in a multi-case test harness. Java and C++ standalone programs receive a JSON array of argument lists on stdin and must print a JSON array of return values. Only matching all server-owned expected values marks a solution correct; execution success alone does not. Judge0 failures are shown to the candidate.
+
+## AI context and transcript safeguards
+
+Technical prompts include the server-assigned problem and constraints, selected language, latest editor snapshot, and server-verified grading summary. Editor context syncs after 1.5 seconds of inactivity and is also sent with every candidate answer/run. A code hash identifies whether prior results apply to the current editor contents.
+
+Candidate text, code/comments, PDFs, printed output, and history remain untrusted model input, separate from Gemini system instructions. Execution output cannot override the authoritative pass counts. Evaluation uses the stored server transcript rather than accepting fabricated browser AI/System turns.
+
+Candidate messages are limited to 2,000 characters, code to 60,000, and AI replies to 4,000. Stored transcripts are capped at 120 entries or 80,000 characters; model history is bounded to 24,000 characters and at most 32 recent turns. Explicit instruction-override attempts are redirected before generation. A context-aware relevance classifier also redirects off-topic requests without storing them or advancing interview counters. If classification is unavailable, the request fails closed with a retry message. These measures reduce prompt-injection risk; model-based filtering is not a guarantee against every adversarial prompt.

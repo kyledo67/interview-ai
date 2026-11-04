@@ -18,6 +18,8 @@ from app.api.endpoints.gemini import InterviewService
 from pydantic import BaseModel #type: ignore
 import os
 import hashlib
+from app.core.interview_policy import ensure_capacity, is_relevant, REDIRECT, LANGUAGES, bounded_history
+from app.schemas.interview import CodeContext
 
 router = APIRouter()
 
@@ -33,6 +35,21 @@ def get_interview_service(request: Request, user: User, db: Session):
             data=resume.content, mime_type="application/pdf"
         )
     return service
+
+
+def ground_service(service, interview, current_code=None, language_id=None):
+    meta = interview.meta_info
+    if current_code is not None:
+        meta["current_code"] = current_code
+    if language_id is not None:
+        meta["language_id"] = language_id
+    service.language = LANGUAGES.get(meta.get("language_id", 71), "Python")
+    if meta.get("mode") in ("technical", "candidate_questions"):
+        service.technical_context = {
+            "problem": meta.get("technical_question"),
+            "current_code": meta.get("current_code", ""),
+            "last_execution": meta.get("last_execution"),
+        }
 
 
 @router.post("/interviews/start")
@@ -52,6 +69,8 @@ def start_interview(
         resume_data = interview_service.parse_resume_from_pdf(stored_resume.content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse resume: {str(e)}")
+
+    resume_data["level"] = "new_grad" if resume_data.get("level") == "new_grad" else "intern"
 
     # Generate first message
     first_message = interview_service.generate_initial_message(resume_data)
@@ -117,6 +136,14 @@ def process_interview_message(
     if not interview:
         raise HTTPException(status_code=404, detail="Active interview not found")
     
+    ensure_capacity(interview, message_data.message)
+    if not is_relevant(request.app.state.gemini_client, request.app.state.gemini_model,
+                       message_data.message, interview.meta_info["mode"],
+                       interview.meta_info.get("technical_question"), interview.transcript):
+        return {"ai_response": REDIRECT, "should_switch_mode": False, "new_mode": None,
+                "technical_data": None, "should_end_interview": False, "redirected": True}
+    ground_service(interview_service, interview, message_data.current_code, message_data.language_id)
+
     interview.transcript.append({
         "timestamp": datetime.now().isoformat(),
         "speaker": "User",
@@ -218,6 +245,9 @@ def execute_code_feedback(
         raise HTTPException(status_code=400, detail="Run this code before requesting feedback.")
     execution_data.output = run["output"]
     execution_data.status = run["status"]
+    execution_summary = f"Code Execution - Status: {execution_data.status}\nOutput: {execution_data.output}"[:4000]
+    ensure_capacity(interview, execution_summary)
+    ground_service(interview_service, interview, execution_data.code, run.get("language_id", 71))
 
     result = interview_service.process_code_execution(
         code=execution_data.code,
@@ -232,7 +262,7 @@ def execute_code_feedback(
     interview.transcript.append({
         "timestamp": datetime.now().isoformat(),
         "speaker": "System",
-        "message": f"Code Execution - Status: {execution_data.status}\nOutput: {execution_data.output}"
+        "message": execution_summary
     })
     
     interview.transcript.append({
@@ -275,17 +305,10 @@ def end_interview(
         raise HTTPException(status_code=404, detail="Interview does not exist")
     
    
-    new_transcript = [
-        {
-            "speaker": message.speaker,
-            "message": message.message,
-            "timestamp": message.timestamp.isoformat()
-        }
-        for message in interview_data.transcript
-    ]
-    
-    interview.transcript = new_transcript
-    
+    # The browser transcript is display data, not an authoritative conversation.
+    # Never allow clients to insert fake AI/System turns into evaluation.
+    ground_service(interview_service, interview, interview_data.final_code)
+
     # Generate evaluation
     final_code = interview_data.final_code or ""
     meta_info = interview.meta_info or {}
@@ -301,7 +324,7 @@ def end_interview(
         technical_duration = (technical_end - technical_start).total_seconds() / 60
     
     evaluation = interview_service.generate_evaluation(
-        transcript=interview.transcript,
+        transcript=bounded_history(interview.transcript),
         final_code=final_code,
         candidate_level=candidate_level,
         technical_question_title=technical_question,
@@ -432,7 +455,23 @@ def advance_phase(interview_id: int, user: User = Depends(get_current_user), db:
             changed = True
             message = "That completes the technical portion. What questions do you have for me?"
     if changed:
+        ensure_capacity(interview, message, entries=1)
         interview.transcript.append({"speaker": "AI", "message": message, "timestamp": datetime.now().isoformat()})
         db.commit()
     return {"mode": meta["mode"], "changed": changed, "ai_response": message,
             "technical_data": meta.get("technical_question")}
+
+
+@router.put("/interviews/{interview_id}/context")
+def update_code_context(interview_id: int, data: CodeContext,
+                        user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    interview = db.query(Interview).filter(Interview.id == interview_id,
+        Interview.user_id == user.id, Interview.status == "active").with_for_update().first()
+    if interview is None:
+        raise HTTPException(status_code=404, detail="Active interview not found")
+    if interview.meta_info.get("mode") != "technical":
+        raise HTTPException(status_code=409, detail="Interview is not in technical phase")
+    interview.meta_info["current_code"] = data.current_code
+    interview.meta_info["language_id"] = data.language_id
+    db.commit()
+    return {"updated": True}

@@ -22,6 +22,7 @@ def seed(db, count=1, minutes=0, mode="behavioral"):
 
 def test_five_replies_persist_and_switch(client, database, monkeypatch):
     seed(database)
+    monkeypatch.setattr(interviews, "is_relevant", lambda *args: True)
     monkeypatch.setattr(InterviewService, "_call_gemini", lambda *args: "Test AI reply")
     for i in range(5):
         response=client.post("/interviews/10/message",json={"message":"My answer"})

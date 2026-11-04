@@ -1,12 +1,12 @@
-from pydantic import BaseModel #type: ignore
+from pydantic import BaseModel, Field #type: ignore
 from datetime import datetime
 from typing import Literal, Optional, Dict, Any, List
 
 
 class Message(BaseModel):
     timestamp: datetime
-    speaker: str
-    message: str
+    speaker: Literal["User", "AI", "System"]
+    message: str = Field(min_length=1, max_length=4000)
 
 
 class Interview(BaseModel):
@@ -16,7 +16,7 @@ class Interview(BaseModel):
     start_time: datetime
     end_time: Optional[datetime] = None
     scores: Optional[Dict[str, Any]] = None
-    meta_info: Optional[Dict[str, Any]] = None 
+    meta_info: Optional[Dict[str, Any]] = None
 
 
 class InterviewCreate(BaseModel):
@@ -24,8 +24,9 @@ class InterviewCreate(BaseModel):
 
 
 class InterviewMessageRequest(BaseModel):
-    message: str
-    current_code: Optional[str] = None
+    message: str = Field(min_length=1, max_length=2000)
+    current_code: Optional[str] = Field(default=None, max_length=60000)
+    language_id: Literal[71, 63, 62, 54] = 71
 
 
 class InterviewMessageResponse(BaseModel):
@@ -36,9 +37,9 @@ class InterviewMessageResponse(BaseModel):
 
 
 class CodeExecutionRequest(BaseModel):
-    code: str
-    output: str
-    status: str  # "Accepted", "Wrong Answer", "Runtime Error", etc.
+    code: str = Field(max_length=60000)
+    output: str = Field(max_length=16000)
+    status: str = Field(max_length=80)  # "Accepted", "Wrong Answer", "Runtime Error", etc.
 
 
 class CodeExecutionResponse(BaseModel):
@@ -47,8 +48,8 @@ class CodeExecutionResponse(BaseModel):
 
 
 class InterviewEnd(BaseModel):
-    transcript: List[Message]
-    final_code: Optional[str] = None  
+    transcript: List[Message] = Field(default_factory=list, max_length=120)
+    final_code: Optional[str] = Field(default=None, max_length=60000)
 
 
 class InterviewSummaryLite(BaseModel):
@@ -61,3 +62,7 @@ class InterviewSummaryLite(BaseModel):
 
 class InterviewSummary(InterviewSummaryLite):
     transcript: Optional[List[Dict]] = None
+
+class CodeContext(BaseModel):
+    current_code: str = Field(max_length=60000)
+    language_id: Literal[71, 63, 62, 54]
