@@ -503,11 +503,6 @@ int main() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          transcript: transcript.map(msg => ({
-            speaker: msg.speaker,
-            message: msg.message,
-            timestamp: msg.timestamp.toISOString()
-          })),
           final_code: code
         })
       });
