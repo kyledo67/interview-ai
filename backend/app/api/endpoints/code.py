@@ -69,6 +69,20 @@ def grade_results(result, function, cases):
         return False, 0
 
 
+def verified_checks(result, function, cases):
+    try:
+        actual = json.loads((result.get("stdout") or "").strip().splitlines()[-1])
+        if not isinstance(actual, list) or len(actual) != len(cases):
+            actual = [None] * len(cases)
+    except (ValueError, IndexError):
+        actual = [None] * len(cases)
+    checks = []
+    for index, (args, expected) in enumerate(cases):
+        passed, _ = grade_results({"status": result.get("status", {}), "stdout": json.dumps([actual[index]])}, function, [(args, expected)])
+        checks.append({"arguments":args, "expected":expected, "passed":passed})
+    return checks
+
+
 async def run_submission(source, language, stdin):
     if not JUDGE0_API_KEY:
         raise HTTPException(status_code=503, detail="Code runner API key is missing.")
@@ -119,6 +133,6 @@ async def execute_code(payload: ExecutionRequest, user: User = Depends(get_curre
     interview.meta_info["current_code"] = payload.source_code
     interview.meta_info["language_id"] = payload.language_id
     interview.meta_info["technical_problem_solved"] = solved
-    interview.meta_info["last_execution"] = {"code_hash":hashlib.sha256(payload.source_code.encode()).hexdigest(), "status":status, "output":output[:16000], "passed":passed, "total":len(cases), "language_id":payload.language_id}
+    interview.meta_info["last_execution"] = {"code_hash":hashlib.sha256(payload.source_code.encode()).hexdigest(), "status":status, "output":output[:16000], "passed":passed, "total":len(cases), "language_id":payload.language_id, "checks":verified_checks(result, function, cases)}
     db.commit()
     return {**result, "status":{"id":(3 if solved else 4) if result.get("status", {}).get("id") == 3 else result.get("status", {}).get("id", 13), "description":status}, "output":output, "problem_solved":solved, "passed":passed, "total":len(cases)}
