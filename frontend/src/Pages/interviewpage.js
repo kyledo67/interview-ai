@@ -59,6 +59,8 @@ const InterviewPage = () => {
   const streamRef = useRef(null);
   const speechSynthesisRef = useRef(null);
   const lastTranscriptLengthRef = useRef(0);
+  const startPromiseRef = useRef(null);
+  const [interviewError, setInterviewError] = useState('');
 
   const languages = [
     { id: 71, name: "Python", monaco: "python" }, 
@@ -69,7 +71,7 @@ const InterviewPage = () => {
 
   useEffect(() => {
     initializeWebcam();
-    startInterview();
+    if (!startPromiseRef.current) startPromiseRef.current = startInterview();
     initializeSpeechRecognition();
   }, []); 
 
@@ -91,7 +93,7 @@ const InterviewPage = () => {
     const currentLang = languages.find(l => l.id === selectedLanguage);
     
     if (currentLang?.monaco === 'java') {
-      setCode(`public class InterviewAi {
+      setCode(`public class Main {
     public static void main(String[] args) {
         
     }
@@ -104,6 +106,8 @@ using namespace std;
 int main() {
     return 0;
 }`);
+    } else if (currentLang?.monaco === 'javascript' && currentProblem) {
+      setCode(`function ${currentProblem.function_name}(...args) {\n  // Return your solution here.\n}\n`);
     } else if (currentProblem?.starter_code) {
       setCode(currentProblem.starter_code);
     } else {
@@ -130,11 +134,10 @@ int main() {
         const newMessages = transcript.slice(lastTranscriptLengthRef.current);
         const lastMessage = newMessages[newMessages.length - 1];
         
+        lastTranscriptLengthRef.current = transcript.length;
         if (lastMessage && lastMessage.speaker === 'User') {
           await sendMessageToAI(lastMessage.message);
         }
-        
-        lastTranscriptLengthRef.current = transcript.length;
       }
     };
     
@@ -370,9 +373,7 @@ int main() {
         speakText(data.ai_response);
         
         if (data.should_switch_mode && data.new_mode === 'technical') {
-          setTimeout(() => {
-            transitionToTechnical(data.technical_data);
-          }, 2000); 
+          transitionToTechnical(data.technical_data);
         }
         else if (data.should_switch_mode && data.new_mode === 'candidate_questions') {
           setCurrentPhase('candidate_questions');
@@ -606,29 +607,39 @@ int main() {
 };
 
   const transitionToTechnical = (technicalData) => {
-  setIsTransitioning(true);
-  
-  setTimeout(() => {
     setCurrentPhase('technical');
     setIsTransitioning(false);
-    
-    if (technicalData) {
-      setCurrentProblem({
-        title: technicalData.title,
-        difficulty: technicalData.difficulty,
-        description: technicalData.description,
-        starter_code: technicalData.starter_code,
-        function_name: technicalData.function_name
-      });
-      
-      if (technicalData.starter_code) {
-        setCode(technicalData.starter_code);
+    if (technicalData) setCurrentProblem(technicalData);
+    else fetchTechnicalProblem();
+  };
+
+  useEffect(() => {
+    if (!interviewId || currentPhase === 'candidate_questions' || isAIThinking || isExecuting) return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const response = await fetch(`/interviews/${interviewId}/phase`, {method: 'POST', credentials: 'include'});
+        if (!response.ok) throw new Error((await response.json()).detail || 'Could not check interview phase');
+        const data = await response.json();
+        if (cancelled) return;
+        if (data.mode === 'technical' && currentPhase !== 'technical') transitionToTechnical(data.technical_data);
+        if (data.mode === 'candidate_questions') setCurrentPhase('candidate_questions');
+        if (data.changed && data.ai_response) {
+          addToTranscript('AI', data.ai_response);
+          setCurrentAIMessage(data.ai_response);
+          speakText(data.ai_response);
+        }
+        setInterviewError('');
+      } catch (error) {
+        if (!cancelled) setInterviewError(error.message);
       }
-    } else {
-      fetchTechnicalProblem();
-    }
-  }, 800);
-};
+    };
+    const timer = setInterval(tick, 10000);
+    tick();
+    return () => { cancelled = true; clearInterval(timer); };
+    // Phase polling deliberately does not depend on transcript/editor changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interviewId, currentPhase, isAIThinking, isExecuting]);
 
   const executeCode = async () => {
     if (!code.trim()) return;
@@ -645,16 +656,21 @@ int main() {
         body: JSON.stringify({
           source_code: code,
           language_id: selectedLanguage,
-          stdin: ""
+          stdin: "",
+          interview_id: interviewId
         })
       });
       
       const result = await response.json();
+      if (!response.ok) throw new Error(result.detail || 'Code execution failed');
       
       let outputText = '';
       let status = 'Unknown';
       
-      if (result.stdout) {
+      if (result.output) {
+        outputText = result.output;
+        status = result.status?.description || 'Unknown';
+      } else if (result.stdout) {
         outputText = `Output:\n${result.stdout}`;
         status = result.status?.description || 'Accepted';
       } else if (result.stderr) {
@@ -770,7 +786,7 @@ int main() {
       </div>
 
       <div className="main-content">
-        {currentPhase === 'behavioral' && (
+        {currentPhase !== 'technical' && (
           <div className={`behavioral-phase ${isTransitioning ? 'transitioning' : ''}`}>
             <div className="video-container-behavioral">
               
@@ -945,6 +961,9 @@ int main() {
 
                 <div className="editor-section">
                   
+                  <p>{selectedLanguage === 71 || selectedLanguage === 63
+                    ? 'Implement the named function. Run Code checks multiple test cases.'
+                    : 'Standalone program: stdin is a JSON array of argument lists. Print a JSON array of results, one per test case.'}</p>
                   <div className="editor-controls">
                     <select
                       value={selectedLanguage}
@@ -992,6 +1011,7 @@ int main() {
         )}
       </div>
 
+      {interviewError && <p role="alert">{interviewError}</p>}
       {showEndCallDialog && (
         <div className="dialog-overlay">
           <div className="dialog-content">

@@ -378,12 +378,9 @@ Be encouraging and educational. VARY your feedback style - don't use the same ph
         feedback = self._call_gemini(system_prompt, prompt, transcript)
         
         # Determine if problem is solved based on status and output
-        problem_solved = (
-            status.lower() in ['accepted', 'success'] and 
-            'error' not in output.lower() and
-            output.strip() != ''
-        )
-        
+        # Only the server-side test runner can establish correctness.
+        problem_solved = False
+
         return {
             "feedback": feedback,
             "problem_solved": problem_solved
@@ -394,31 +391,8 @@ Be encouraging and educational. VARY your feedback style - don't use the same ph
         questions_asked: int, 
         duration_minutes: float
     ) -> bool:
-        if questions_asked >= 5:
-            return True
-        
-        if questions_asked >= 4:
-            if duration_minutes >= 8:  
-                return True
-            else:
-                return random.random() < 0.6 
-        
-        if questions_asked >= 3:
-            if duration_minutes >= 10:  
-                return True
-            elif duration_minutes >= 6:  
-                return random.random() < 0.4 
-            else:
-               
-                return random.random() < 0.1
-        
-       
-        if questions_asked >= 2 and duration_minutes >= 15:
-            return random.random() < 0.3
-        
-       
-        return False
-    
+        return questions_asked >= 5 or duration_minutes >= 15
+
     def _should_end_technical_phase(
         self,
         technical_duration_minutes: float,

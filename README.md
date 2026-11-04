@@ -26,3 +26,9 @@ Copy `backend/.env.example` to `backend/.env` and fill in the values. From `back
 
 Install `requirements.txt` plus `pytest`, then run `python -m pytest -q`. Tests use isolated SQLite data and do not call production AI services. Build the frontend with `npm run build --prefix frontend`.
 
+
+## Interview progression and code checks
+
+Behavioral interviews switch after five replies or 15 minutes. The browser checks the server clock every ten seconds, including when the candidate is silent. Interview JSON state and transcript changes persist across requests. Technical interviews end after a verified solution or 45 minutes.
+
+Run Code uses the authenticated `/code/execute` API and the problem stored on the server. Python and JavaScript submissions implement the named function and are wrapped in a multi-case test harness. Java and C++ standalone programs receive a JSON array of argument lists on stdin and must print a JSON array of return values. Only matching all server-owned expected values marks a solution correct; execution success alone does not. Judge0 failures are shown to the candidate.

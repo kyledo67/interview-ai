@@ -17,6 +17,7 @@ from app.schemas.interview import (
 from app.api.endpoints.gemini import InterviewService
 from pydantic import BaseModel #type: ignore
 import os
+import hashlib
 
 router = APIRouter()
 
@@ -111,7 +112,7 @@ def process_interview_message(
         Interview.id == interview_id,
         Interview.user_id == user.id,
         Interview.status == "active"
-    ).first()
+    ).with_for_update().first()
     
     if not interview:
         raise HTTPException(status_code=404, detail="Active interview not found")
@@ -202,7 +203,7 @@ def execute_code_feedback(
         Interview.id == interview_id,
         Interview.user_id == user.id,
         Interview.status == "active"
-    ).first()
+    ).with_for_update().first()
     
     if not interview:
         raise HTTPException(status_code=404, detail="Active interview not found")
@@ -212,6 +213,12 @@ def execute_code_feedback(
         technical_start = datetime.fromisoformat(interview.meta_info["technical_start_time"])
         technical_duration = (datetime.now() - technical_start).total_seconds() / 60
     
+    run = interview.meta_info.get("last_execution", {})
+    if run.get("code_hash") != hashlib.sha256(execution_data.code.encode()).hexdigest():
+        raise HTTPException(status_code=400, detail="Run this code before requesting feedback.")
+    execution_data.output = run["output"]
+    execution_data.status = run["status"]
+
     result = interview_service.process_code_execution(
         code=execution_data.code,
         output=execution_data.output,
@@ -234,8 +241,7 @@ def execute_code_feedback(
         "message": result["feedback"]
     })
     
-    if result.get("problem_solved"):
-        interview.meta_info["technical_problem_solved"] = True
+    result["problem_solved"] = interview.meta_info.get("technical_problem_solved", False)
     
     db.commit()
     
@@ -263,7 +269,7 @@ def end_interview(
     interview = db.query(Interview).filter(
         Interview.id == id,
         Interview.user_id == user.id
-    ).first()
+    ).with_for_update().first()
     
     if not interview:
         raise HTTPException(status_code=404, detail="Interview does not exist")
@@ -356,7 +362,7 @@ def get_specific_user_interviews(
     specific_interview = db.query(Interview).filter(
         Interview.user_id == user.id, 
         Interview.id == id
-    ).first()
+    ).with_for_update().first()
     
     if not specific_interview:
         raise HTTPException(status_code=404, detail="Interview not found or access denied")
@@ -380,7 +386,7 @@ def get_technical_problem(
         Interview.id == interview_id,
         Interview.user_id == user.id,
         Interview.status == "active"
-    ).first()
+    ).with_for_update().first()
     
     if not interview:
         raise HTTPException(status_code=404, detail="Active interview not found")
@@ -399,3 +405,34 @@ def get_technical_problem(
         "technical_data": technical_question,
         "candidate_level": interview.meta_info.get("candidate_level", "intern")
     }
+
+
+@router.post("/interviews/{interview_id}/phase")
+def advance_phase(interview_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    interview = db.query(Interview).filter(
+        Interview.id == interview_id, Interview.user_id == user.id, Interview.status == "active"
+    ).with_for_update().first()
+    if interview is None:
+        raise HTTPException(status_code=404, detail="Active interview not found")
+    meta = interview.meta_info
+    elapsed = (datetime.now() - datetime.fromisoformat(meta["behavioral_start_time"])).total_seconds() / 60
+    changed = False
+    message = None
+    if meta["mode"] == "behavioral" and elapsed >= 15:
+        meta["mode"] = "technical"
+        meta["technical_question"] = InterviewService(None, "")._generate_technical_question(meta["candidate_level"])
+        meta["technical_start_time"] = datetime.now().isoformat()
+        changed = True
+        message = "Let's move on to the technical coding portion. Your problem is now on screen."
+    elif meta["mode"] == "technical":
+        elapsed = (datetime.now() - datetime.fromisoformat(meta["technical_start_time"])).total_seconds() / 60
+        if meta.get("technical_problem_solved") or elapsed >= 45:
+            meta["mode"] = "candidate_questions"
+            meta["asked_candidate_questions"] = True
+            changed = True
+            message = "That completes the technical portion. What questions do you have for me?"
+    if changed:
+        interview.transcript.append({"speaker": "AI", "message": message, "timestamp": datetime.now().isoformat()})
+        db.commit()
+    return {"mode": meta["mode"], "changed": changed, "ai_response": message,
+            "technical_data": meta.get("technical_question")}
