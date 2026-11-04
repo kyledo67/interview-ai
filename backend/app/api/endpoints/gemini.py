@@ -929,7 +929,8 @@ Don't use the same phrases every time."""
             context = self.technical_context or {}
             current_code = context.get("current_code", "")
             execution = context.get("last_execution") or {}
-            matches = execution.get("code_hash") == hashlib.sha256(current_code.encode()).hexdigest()
+            matches = (execution.get("code_hash") == hashlib.sha256(current_code.encode()).hexdigest()
+                       and LANGUAGES.get(execution.get("language_id", 71)) == self.language)
             authority = {
                 "assigned_problem": context.get("problem"),
                 "selected_language": self.language,
