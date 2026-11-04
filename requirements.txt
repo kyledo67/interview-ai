@@ -1,1 +1,18 @@
--r backend/imports.txt
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+pydantic
+passlib==1.7.4
+bcrypt==4.0.1
+python-jose[cryptography]
+pydantic-settings
+pydantic[email]
+httpx
+python-multipart
+google-generativeai
+google-genai
+PyPDF2
+requests
+python-dotenv
