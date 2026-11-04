@@ -1,6 +1,7 @@
 from fastapi import FastAPI # type: ignore
 from fastapi.middleware.cors import CORSMiddleware # type: ignore
 from app.database import engine, Base
+from sqlalchemy import text
 from app.models import user, token, interview, resume as resume_model
 from app.api.endpoints import interviews, code, resume, tts, auth
 from fastapi.staticfiles import StaticFiles # type: ignore
@@ -12,6 +13,10 @@ import os
 load_dotenv()
 
 Base.metadata.create_all(bind=engine)
+if engine.dialect.name == "postgresql":
+    # Also protect a table created by an earlier deployment of this migration.
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE resumes ENABLE ROW LEVEL SECURITY"))
 app = FastAPI()
 
 
