@@ -127,3 +127,19 @@ def test_candidate_question_injection_is_not_in_system_instructions():
         questions_asked=5,behavioral_duration_minutes=5,technical_duration_minutes=5,mode="candidate_questions")
     assert "BANANA_OVERRIDE" not in calls[0]["config"].system_instruction
     assert "BANANA_OVERRIDE" in calls[0]["contents"][0]
+
+
+def test_quota_failure_is_explicit_and_does_not_bypass_relevance():
+    from fastapi import HTTPException
+    class QuotaError(Exception):
+        code=429
+    def fail(**kwargs):
+        raise QuotaError()
+    api=SimpleNamespace(models=SimpleNamespace(generate_content=fail))
+    with pytest.raises(HTTPException) as blocked:
+        is_relevant(api,"model","Can you explain my code?","technical",PROBLEM,[])
+    assert blocked.value.status_code==429 and blocked.value.headers["Retry-After"]=="60"
+    service=InterviewService(api,"model")
+    with pytest.raises(HTTPException) as generation:
+        service._call_gemini("Interview guidance","Explain the assigned problem")
+    assert generation.value.status_code==429
