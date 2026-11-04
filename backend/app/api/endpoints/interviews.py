@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, status, Response, Request, HTTPException
 from app.models.interview import Interview
 from app.database import get_db
 from app.models.user import User
+from app.models.resume import Resume
+from google.genai import types
 from datetime import datetime, timedelta
 from app.config import settings
 from app.core.security import get_current_user
@@ -19,6 +21,19 @@ import os
 router = APIRouter()
 
 
+def get_interview_service(request: Request, user: User, db: Session):
+    # Candidate context must survive cold starts without being shared across users.
+    service = InterviewService(
+        request.app.state.gemini_client, request.app.state.gemini_model
+    )
+    resume = db.get(Resume, user.id)
+    if resume is not None:
+        service.uploaded_resume_file = types.Part.from_bytes(
+            data=resume.content, mime_type="application/pdf"
+        )
+    return service
+
+
 @router.post("/interviews/start")
 def start_interview(
     interview_data: InterviewCreate, 
@@ -26,22 +41,17 @@ def start_interview(
     user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)
 ):
-    interview_service: InterviewService = request.app.state.interview_service
+    interview_service: InterviewService = get_interview_service(request, user, db)
     
-    # get resume path and send to Gemini for analysis
-    upload_dir = "uploads/resumes"
-    os.makedirs(upload_dir, exist_ok=True)
-    filename = f"{user.id}_resume.pdf"
-    filepath = os.path.join(upload_dir, filename)
-    
-    if not os.path.exists(filepath):
+    stored_resume = db.get(Resume, user.id)
+    if stored_resume is None:
         raise HTTPException(status_code=400, detail="Resume not found. Please upload your resume first.")
-    
+    filepath = f"database:resumes/{user.id}"
     try:
-        resume_data = interview_service.parse_resume_from_pdf(filepath)
+        resume_data = interview_service.parse_resume_from_pdf(stored_resume.content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse resume: {str(e)}")
-    
+
     # Generate first message
     first_message = interview_service.generate_initial_message(resume_data)
     
@@ -94,7 +104,7 @@ def process_interview_message(
     db: Session = Depends(get_db)
 ):
 
-    interview_service: InterviewService = request.app.state.interview_service
+    interview_service: InterviewService = get_interview_service(request, user, db)
     
  
     interview = db.query(Interview).filter(
@@ -185,7 +195,7 @@ def execute_code_feedback(
     """
     Process code execution results and provide AI feedback
     """
-    interview_service: InterviewService = request.app.state.interview_service
+    interview_service: InterviewService = get_interview_service(request, user, db)
     
     
     interview = db.query(Interview).filter(
@@ -247,7 +257,7 @@ def end_interview(
     """
     End interview and generate evaluation scores
     """
-    interview_service: InterviewService = request.app.state.interview_service
+    interview_service: InterviewService = get_interview_service(request, user, db)
     
  
     interview = db.query(Interview).filter(
@@ -299,13 +309,11 @@ def end_interview(
     
     db.commit()
     
-    filepath = interview.resume_path
-    if filepath and os.path.exists(filepath):
-        try:
-            os.remove(filepath)
-        except Exception as e:
-            print(f"Failed to delete resume: {e}")
-    
+    stored_resume = db.get(Resume, user.id)
+    if stored_resume is not None:
+        db.delete(stored_resume)
+        db.commit()
+
     return {
         "message": "Interview ended",
         "evaluation": evaluation

@@ -79,6 +79,7 @@ function Resumeupload() {
                 gap: "20px"
             }}>
                 <h1>Resume Upload</h1>
+                <p>Upload a PDF up to 4 MB.</p>
                 <p>Welcome, {user?.email}!</p>
                 
                 <input

@@ -3,6 +3,7 @@ import re
 from typing import Dict, Optional, List
 import random
 from google import genai
+from google.genai import types
 
 class InterviewService:
     def __init__(self, client, model_name: str):
@@ -10,10 +11,10 @@ class InterviewService:
         self.model_name = model_name
         self.uploaded_resume_file = None
     
-    def parse_resume_from_pdf(self, pdf_path: str) -> Dict:
+    def parse_resume_from_pdf(self, pdf_data: bytes) -> Dict:
         try:
             
-            self.uploaded_resume_file = self.client.files.upload(file=pdf_path)
+            self.uploaded_resume_file = types.Part.from_bytes(data=pdf_data, mime_type="application/pdf")
             
            
             analysis_prompt = """Analyze this software engineering resume thoroughly and extract the following information:

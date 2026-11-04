@@ -1,0 +1,31 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci --prefix frontend",
+  "buildCommand": "CI=false npm run build --prefix frontend",
+  "outputDirectory": "frontend/build",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{frontend/**,.venv/**,tests/**,.git/**}"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(register|login|me|refresh|resumeupload|tts|health|docs|redoc|openapi.json)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/interviews/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/code/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
